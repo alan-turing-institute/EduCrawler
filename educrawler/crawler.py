@@ -280,9 +280,21 @@ class Crawler:
         # "project" lab -> "more"
         ################################################################################################
 
+        # sleep(4)
 
+        # found = False
 
-        # sleep(30)
+        # try:
+        #     more_buttom = self.client.find_element_by_class_name("ext-assignment-detail-more-handout-link")
+        #     found = True
+        # except:
+        #     found = False
+        
+        # print("more_buttom: ", more_buttom)
+        # #more_buttom.click()
+
+        
+        sleep(30)
             
 
     def quit(self):
