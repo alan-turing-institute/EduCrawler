@@ -30,6 +30,7 @@ def wait_to_load(client, condition, value, exists):
         particular object exists/doesn't exist.
 
     Arguments:
+        client: chrome driver client
         condition (string): condition by which object will be identified
         value (string): value by which object will be identified
         exists (bool): True - sleep while object exists, False - sleep until object comes to existance

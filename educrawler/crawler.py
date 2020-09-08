@@ -177,7 +177,6 @@ class Crawler:
 
         Arguments:
             course_name: name of the course
-        
         """
 
         found = False
@@ -224,29 +223,67 @@ class Crawler:
             log("Could not load %s course. Returning." % (course_name), indent=2)
             return None
 
-        # # pick the lab where all the subscriptions are
-        # found = False
+        # wait until the overview page is loaded
+        sleep_counter = 0
+        sleep_wait = True
+        found = False
+        course_title = None
 
-        # for entry in entries:
-        #     print(entry, entry.text)
-        #     element = entry.find_element_by_class_name("ext-grid-clickable-link")
+        while sleep_wait and sleep_counter < CONST_MAX_REFRESH_COUNT:
 
-        #     print(element, element.text)
-        #     if element.text == CONST_DEFAULT_LAB_NAME:
-        #         log("Found %s lab!" % (CONST_DEFAULT_LAB_NAME), indent=2)
-        #         found = True
-        #         break
+            log("Sleeping while the course overview is loading (%f).." % (CONST_REFRESH_SLEEP_TIME), indent=2)
+            sleep(CONST_REFRESH_SLEEP_TIME)
+
+            course_title_list = self.client.find_elements_by_class_name("ext-classroom-overview-class-name-title")
+
+            if len(course_title_list) != 0:
+                sleep_wait = False
+                log("Loaded!", indent=2)
+                found = True
+                course_title = course_title_list[0].text
+
+        if not found:
+            log("Could not load %s course. Returning." % (course_name), indent=2)
+            return None
+
+        if course_title != course_name:
+            log("The loaded course's title (%s) doesn't match the given name (%s)." % (course_title, course_name), indent=2)
+            return None
+
+        ################################################################################################
+        # course overview -> "project" lab
+        ################################################################################################
+
+        found = False
+
+        classroom_grid = self.client.find_element_by_class_name("ext-classroom-overview-assignment-grid")
         
-        # if not found:
-        #     log("Could not find %s lab. Returning." % (CONST_DEFAULT_LAB_NAME), indent=2)
-        #     return None
+        entries = classroom_grid.find_elements_by_class_name("azc-grid-groupdata")
 
-        # element.click()
+        for entry in entries:
+
+            element = entry.find_element_by_class_name("ext-grid-clickable-link")
+
+            if element.text.lower() == CONST_DEFAULT_LAB_NAME.lower():
+                log("Found %s lab!" % (CONST_DEFAULT_LAB_NAME), indent=2)
+                found = True
+                break
+        
+        if not found:
+            log("Could not find %s lab. Returning." % (CONST_DEFAULT_LAB_NAME), indent=2)
+            return None
+
+        else:
+            element.click()
+
+        ################################################################################################
+        # "project" lab -> "more"
+        ################################################################################################
 
 
-        sleep(20)
+
+        # sleep(30)
             
-        
 
     def quit(self):
         """
