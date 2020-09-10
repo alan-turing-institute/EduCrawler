@@ -272,7 +272,6 @@ class Crawler:
         if not found:
             log("Could not find %s lab. Returning." % (CONST_DEFAULT_LAB_NAME), indent=2)
             return None
-
         else:
             element.click()
 
@@ -280,22 +279,213 @@ class Crawler:
         # "project" lab -> "more"
         ################################################################################################
 
-        # sleep(4)
+        sleep_counter = 0
+        found = False
+        more_buttom = None
 
-        # found = False
+        while not found and sleep_counter < CONST_MAX_REFRESH_COUNT:
 
-        # try:
-        #     more_buttom = self.client.find_element_by_class_name("ext-assignment-detail-more-handout-link")
-        #     found = True
-        # except:
-        #     found = False
+            log("Sleeping while the initial handout list is loading (%f).." % (CONST_REFRESH_SLEEP_TIME), indent=2)
+            sleep(CONST_REFRESH_SLEEP_TIME)
+
+            try:
+                more_buttom = self.client.find_element_by_class_name("ext-assignment-detail-more-handout-link")
+                found = True
+            except:
+                found = False
         
-        # print("more_buttom: ", more_buttom)
-        # #more_buttom.click()
+        if not found:
+            log("Could not find 'more' button. Returning." % (course_name), indent=2)
+            return None
 
+        more_buttom.click()
+
+        # Gets details of all the handouts of a selected lab in a course
+        handouts_df, handouts_err = self.get_handouts_details(course_name, CONST_DEFAULT_LAB_NAME)
+
+        print(handouts_df)
+
+        sleep(10)
+    
+
+    def get_handouts_details(self, course_name, lab_name):
+        """
+        Gets the details of all the handouts of a selected lab in a course and returns them as a
+            pandas dataframe.
+
+        Arguments:
+            course_name: the name of the course
+            lab_name: the name of the lab
+
+        Returns:
+            handouts_df: pandas dataframe
+        """
+
+        data = []
+
+        handouts_df = None
+        error = None
+
+        sleep_counter = 0
+        found = False
+        handout_list_table = None
+
+        while not found and sleep_counter < CONST_MAX_REFRESH_COUNT:
+
+            log("Sleeping while the (%s) course -> (%s) lab -> more blade: handout list table is loading (%.2f).." \
+                % (course_name, lab_name, CONST_REFRESH_SLEEP_TIME), indent=4)
+
+            sleep(CONST_REFRESH_SLEEP_TIME)
+
+            try:
+                handout_list_table = self.client.find_element_by_class_name("ext-classroster-grid")
+                found = True
+            except:
+                found = False
+
+            sleep_counter += 1
         
-        sleep(30)
+        if not found:
+            error = "Could not load the (%s) course -> (%s) lab -> more blade: handout list table." \
+                % (course_name, lab_name)
+            log(error, indent=4)
+
+            return handouts_df, error
+
+        # Checks if the correct lab is loaded
+        blade_titles = self.client.find_elements_by_class_name("fxs-blade-title-content")
+        blade_titles_cnt = len(blade_titles)
+
+        if blade_titles_cnt != 4:
+            error = "Expected to be in the (%s) course -> (%s) lab -> more blade (depth = 4). Current depth = %d." % \
+                (course_name, lab_name, blade_titles_cnt)
+
+            log(error, indent=4)
+
+            return handouts_df, error
+
+        sleep_counter = 0
+        consumption_loaded = False
+
+        while not consumption_loaded and sleep_counter < CONST_MAX_REFRESH_COUNT:
+            consumption_loaded = True
             
+            log("Sleeping while the (%s) course -> (%s) lab -> more blade: handout list table is loading consumption data (%.2f).." \
+                % (course_name, lab_name, CONST_REFRESH_SLEEP_TIME), indent=4)
+
+            sleep(CONST_REFRESH_SLEEP_TIME)
+
+            # Finding the list of handouts
+            handout_list = handout_list_table.find_elements_by_class_name("azc-grid-row")
+
+            # Getting details for handouts/subscriptions
+            for handout in handout_list:
+                
+                handout_details = handout.find_elements_by_class_name("azc-grid-cellContent")
+                
+                if len(handout_details) < 6:
+                    # something wrong, incorrect number of cells
+                    continue
+
+                handout_link = handout_details[0].find_element_by_class_name("ext-grid-clickable-link")
+
+                handout_name = handout_link.text
+                handout_budget = handout_details[3].text.lower()
+                handout_consumed = handout_details[4].text.lower()
+                handout_status = handout_details[5].text.lower()
+
+                if handout_consumed == "--":
+                    consumption_loaded = False
+                    break
+                
+                handout_link.click()
+
+                sub_status, sub_name, sub_id, sub_status, sub_user_email_list = self.get_handout_details(handout_name)
+                
+                if sub_status:
+                    data.append([handout_name, handout_budget, handout_consumed, handout_status, \
+                        sub_name, sub_id, sub_status, sub_user_email_list])
+                else:
+                    error = "(%s) course -> (%s) lab -> (%s) handout subscription details could not be read!" \
+                        % (course_name, lab_name, handout_name)
+                    
+                    log(error, indent=4)
+                    break
+
+            if error is not None:
+                break
+
+            sleep_counter += 1
+
+
+        handouts_df = pd.DataFrame(data, 
+            columns = ['Handout name', 'Handout budget', 'Handout consumed', 'Handout status', \
+                'Subscription name', 'Subscription id', 'Subscription status', 'Subscription users'])
+
+        log("Finished getting the (%s) course -> (%s) lab -> more blade: handout details" \
+            % (course_name, lab_name), indent=4)
+
+        return handouts_df, error
+
+
+    def get_handout_details(self, handout_name):
+        """
+        Gets the handout details (sub_name, sub_id, sub_status, sub_user_email_list) from the
+            Handout details blade. Checks if the correct handout is being selected by comparing
+            subscription name with the handout name.
+
+        Arguments:
+            handout_name: handout name
+
+        Returns:
+            sub_details_loaded: a flag indicating if subscription details were read successfully
+            sub_name, sub_id, sub_status, sub_user_email_list
+        """
+
+        sub_sleep_counter = 0
+        sub_details_loaded = False
+        sub_name = None
+        sub_id = None
+        sub_status = None
+        sub_user_email_list = []
+
+        while not sub_details_loaded and sub_sleep_counter < CONST_MAX_REFRESH_COUNT:
+
+            log("Sleeping while handout (%s) details are loading (%f).." % (handout_name, CONST_REFRESH_SLEEP_TIME), indent=5)
+            sleep(CONST_REFRESH_SLEEP_TIME)
+
+            try:
+                sub_name = self.client.find_element_by_class_name("ext-classroom-handout-edit-subscription-name").text
+                sub_id = self.client.find_element_by_class_name("ext-classroom-handout-edit-subscription-id").text
+                sub_status = self.client.find_element_by_class_name("ext-classroom-handout-edit-subscription-status-data").text
+                user_email_list = self.client.find_elements_by_class_name("ext-classroom-handout-edit-user-email")
+
+                if sub_name == handout_name and len(user_email_list) > 0:
+                    sub_details_loaded = True
+                else:
+                    continue
+
+                for user_email_li in user_email_list:
+                    try:
+                        user_email = user_email_li.text
+                    except:
+                        user_email = None
+                    
+                    if user_email is not None:
+                        sub_user_email_list.append(user_email)
+
+            except:
+                sub_details_loaded = False
+
+            sub_sleep_counter += 1
+
+        if sub_details_loaded:
+            log("Handout (%s) details were read." % (handout_name), indent=5)
+        else:
+            log("Could not read Handout (%s) details" % (handout_name), indent=5)
+
+        return sub_details_loaded, sub_name, sub_id, sub_status, sub_user_email_list
+
 
     def quit(self):
         """

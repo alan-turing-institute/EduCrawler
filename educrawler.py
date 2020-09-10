@@ -23,7 +23,7 @@ def main(args):
 
     #courses_df = crawler.get_courses_df()
 
-    crawler.get_course_details("AI for Science & Government (ASG)")
+    crawler.get_course_details("Urban analytics")
 
     crawler.quit()
 
