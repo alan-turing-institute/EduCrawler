@@ -1,6 +1,7 @@
 import argparse
 import yaml
 
+from time import sleep
 
 from educrawler.utilities import log
 from educrawler.crawler import Crawler
@@ -8,28 +9,12 @@ from educrawler.constants import (
     CONST_CONFIG_FILE,
 )
 
-def main(args):
+def main():
     """
-    Arguments:
-        args - command line arguments
+    The main routine.
+
     """
-
-    log("Reading config file %s" % (args.fconfig))
-
-    with open(args.fconfig, "r") as ymlfile:
-        cfg = yaml.safe_load(ymlfile)
-
-    crawler = Crawler(cfg["login_email"], cfg["login_password"], hide=False)
-
-    #courses_df = crawler.get_courses_df()
-
-    crawler.get_course_details("Urban analytics")
-
-    crawler.quit()
-
-
-if __name__ == "__main__":
-
+    
     # Command line arguments
     PARSER = argparse.ArgumentParser(
         description="Microsoft's EduHub portal crawler."
@@ -41,10 +26,34 @@ if __name__ == "__main__":
         help="YAML config file (default: %s)." % (CONST_CONFIG_FILE),
     )
 
-    ARGS, _ = PARSER.parse_known_args()
+    args, _ = PARSER.parse_known_args()
 
-    log("Started")
+    log("Started", level=0)
 
-    main(ARGS)
+    log("Reading config file %s" % (args.fconfig), level=1)
 
-    log("Finished")
+    with open(args.fconfig, "r") as ymlfile:
+        cfg = yaml.safe_load(ymlfile)
+
+    crawler = Crawler(cfg["login_email"], cfg["login_password"], hide=False)
+
+    #courses_df = crawler.get_courses_df()
+    #print(courses_df)
+
+    handouts_df, error = crawler.get_course_details("Urban analytics")
+
+    if error is not None:
+        log(error, level=0)
+    else:
+        print(handouts_df)
+
+    sleep(10)
+
+    crawler.quit()
+
+    log("Finished", level=0)
+
+
+if __name__ == "__main__":
+    main()
+

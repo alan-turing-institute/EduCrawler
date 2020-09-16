@@ -3,8 +3,9 @@ EduHub portal crawling module.
 """
 
 from time import sleep
-
 import pandas as pd
+import logging
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
@@ -51,6 +52,8 @@ class Crawler:
 
         self.client = webdriver.Chrome(ChromeDriverManager().install(), options=options)
 
+        log("Logging to %s as %s" % (CONST_PORTAL_ADDRESS, login_email), level=1)
+
         self.client.get(CONST_PORTAL_ADDRESS)
 
         # entering email address
@@ -67,11 +70,13 @@ class Crawler:
 
         # wait until the mfa has been approved
         if mfa:
+            log("Waiting for MFA approval.", level=1)
+
             sleep_counter = 0
             sleep_wait = True
 
             while sleep_wait and sleep_counter < CONST_MAX_REFRESH_COUNT:
-                log("Sleeping while waiting for MFA approval (%f).." % (CONST_REFRESH_SLEEP_TIME), indent=2)
+                log("Sleeping (%f).." % (CONST_REFRESH_SLEEP_TIME), level=3, indent=2)
                 sleep(CONST_REFRESH_SLEEP_TIME)
 
                 try:
@@ -79,7 +84,7 @@ class Crawler:
                 except:
                     try:
                         self.client.find_element_by_xpath("//input[@type='submit']")
-                        log("Approved!", indent=2)
+                        log("MFA approved!", level=1)
                         sleep_wait = False
                     except:
                         sleep_wait = True
@@ -87,7 +92,7 @@ class Crawler:
                 sleep_counter += 1 
 
             if sleep_wait == True:
-                log("MFA was not approved! Quiting.")
+                log("MFA was not approved! Stopping.", level=0)
                 
                 self.client.quit()
                 self.client = None
@@ -102,28 +107,28 @@ class Crawler:
 
         """
 
-        log("Getting the list of courses")
+        log("Getting the list of courses", level=1)
 
-        log("Loading %s" % (CONST_PORTAL_COURSES_ADDRESS), indent=2)
+        log("Loading %s" % (CONST_PORTAL_COURSES_ADDRESS), level=2, indent=2)
         self.client.get(CONST_PORTAL_COURSES_ADDRESS)
         
         # Finds table entries
-        log("Finding courses", indent=2)
-
         sleep_counter = 0
         sleep_wait = True
 
         while sleep_wait and sleep_counter < CONST_MAX_REFRESH_COUNT:
 
-            log("Sleeping while courses are loading (%f).." % (CONST_REFRESH_SLEEP_TIME), indent=2)
+            log("Sleeping while courses are loading (%f).." % (CONST_REFRESH_SLEEP_TIME), level=3, indent=2)
             sleep(CONST_REFRESH_SLEEP_TIME)
 
             entries = self.client.find_elements_by_xpath('//*[@class="fxs-portal-hover fxs-portal-focus azc-grid-row"]')
 
             if len(entries) != 0:
                 sleep_wait = False
-                log("Loaded!", indent=2)
+                log("List of courses loaded!", level=2, indent=2)
         
+        log("Found %d courses." % (len(entries)), level=1, indent=2)
+
         return entries
 
 
@@ -163,10 +168,6 @@ class Crawler:
 
         courses_df = pd.DataFrame(data, columns = ['Name', 'Assigned credit', 'Consumed', 'Students', 'Project groups'])
 
-        log("Found %d courses!" % (len(courses_df.index)), indent=2)
-
-        print(courses_df)
-
         return courses_df
    
 
@@ -180,79 +181,70 @@ class Crawler:
         """
 
         found = False
-        log("Looking for %s details" % (course_name))
+        log("Looking for %s course details" % (course_name), level=1)
 
+        ############################################################################
         # first navigate to the courses page and wait till it loads
+        ############################################################################
+
         entries = self.get_courses()
 
-        # select 
+        ############################################################################
+        # select the course
+        ############################################################################
+        
         for entry in entries:
             elements = entry.find_elements_by_class_name("azc-grid-cellContent")
 
             if elements[0].text == course_name:
-                log("Found %s!" % (course_name), indent=2)
+                log("(%s) course found." % (course_name), level=1)
                 found = True
                 break
         
         if not found:
-            log("Could not find %s course. Returning." % (course_name), indent=2)
-            return None
+            error = "Could not find (%s) course. Returning." % (course_name)
+            log(error, level=0)
+            return None, error
+
+        ############################################################################
+        # wait until the course overview page is loaded
+        ############################################################################
 
         elements[0].click()
-        
-        # load
-        log("Opening %s" % (course_name), indent=2)
+
+        log("Loading (%s) course " % (course_name), level=1)
 
         sleep_counter = 0
-        sleep_wait = True
-        found = False
-
-        while sleep_wait and sleep_counter < CONST_MAX_REFRESH_COUNT:
-
-            log("Sleeping while the course is loading (%f).." % (CONST_REFRESH_SLEEP_TIME), indent=2)
-            sleep(CONST_REFRESH_SLEEP_TIME)
-
-            entries = self.client.find_elements_by_xpath('//*[@class="azc-grid-groupdata"]')
-
-            if len(entries) != 0:
-                sleep_wait = False
-                log("Loaded!", indent=2)
-                found = True
-        
-        if not found:
-            log("Could not load %s course. Returning." % (course_name), indent=2)
-            return None
-
-        # wait until the overview page is loaded
-        sleep_counter = 0
-        sleep_wait = True
         found = False
         course_title = None
 
-        while sleep_wait and sleep_counter < CONST_MAX_REFRESH_COUNT:
+        while not found and sleep_counter < CONST_MAX_REFRESH_COUNT:
 
-            log("Sleeping while the course overview is loading (%f).." % (CONST_REFRESH_SLEEP_TIME), indent=2)
+            log("Sleeping while the (%s) course overview is loading (%f).." % (course_name, CONST_REFRESH_SLEEP_TIME), level=3, indent=2)
             sleep(CONST_REFRESH_SLEEP_TIME)
 
             course_title_list = self.client.find_elements_by_class_name("ext-classroom-overview-class-name-title")
 
             if len(course_title_list) != 0:
-                sleep_wait = False
-                log("Loaded!", indent=2)
+                log("(%s) course overview loaded." % (course_name), level=2)
                 found = True
                 course_title = course_title_list[0].text
 
         if not found:
-            log("Could not load %s course. Returning." % (course_name), indent=2)
-            return None
+            error = "Could not load (%s) course. Returning." % (course_name)
+            log(error, level=0, indent=2)
+            return None, error
 
         if course_title != course_name:
-            log("The loaded course's title (%s) doesn't match the given name (%s)." % (course_title, course_name), indent=2)
-            return None
+            error = "The loaded course's title (%s) doesn't match the given name (%s)." % (course_title, course_name)
+            log(error, level=0, indent=2)
+            return None, error
 
-        ################################################################################################
+        ############################################################################
         # course overview -> "project" lab
-        ################################################################################################
+        ############################################################################
+
+        log("Loading (%s) course -> (%s) lab blade." % (course_name, CONST_DEFAULT_LAB_NAME), level=1)
 
         found = False
 
@@ -265,19 +257,24 @@ class Crawler:
             element = entry.find_element_by_class_name("ext-grid-clickable-link")
 
             if element.text.lower() == CONST_DEFAULT_LAB_NAME.lower():
-                log("Found %s lab!" % (CONST_DEFAULT_LAB_NAME), indent=2)
+                log("(%s) lab found" % (CONST_DEFAULT_LAB_NAME), level=2)
                 found = True
                 break
         
         if not found:
-            log("Could not find %s lab. Returning." % (CONST_DEFAULT_LAB_NAME), indent=2)
-            return None
+            error = "Could not find (%s) lab. Returning." % (CONST_DEFAULT_LAB_NAME)
+            log(error, level=0, indent=2)
+            return None, error
+
         else:
             element.click()
 
-        ################################################################################################
+        ############################################################################
         # "project" lab -> "more"
-        ################################################################################################
+        ############################################################################
+
+        log("Loading (%s) course -> (%s) lab -> more blade." % (course_name, CONST_DEFAULT_LAB_NAME), \
+            level=1)
 
         sleep_counter = 0
         found = False
@@ -285,7 +282,7 @@ class Crawler:
 
         while not found and sleep_counter < CONST_MAX_REFRESH_COUNT:
 
-            log("Sleeping while the initial handout list is loading (%f).." % (CONST_REFRESH_SLEEP_TIME), indent=2)
+            log("Sleeping while the initial handout list is loading (%f).." % (CONST_REFRESH_SLEEP_TIME), level=3, indent=2)
             sleep(CONST_REFRESH_SLEEP_TIME)
 
             try:
@@ -295,18 +292,22 @@ class Crawler:
                 found = False
         
         if not found:
-            log("Could not find 'more' button. Returning." % (course_name), indent=2)
-            return None
-
+            error = "Could not find 'more' button in the (%s) course -> (%s) lab blade. Returning." % (course_name, CONST_DEFAULT_LAB_NAME)
+            log(error, level=0, indent=2)
+            return None, error
+            
         more_buttom.click()
 
+        ############################################################################
         # Gets details of all the handouts of a selected lab in a course
-        handouts_df, handouts_err = self.get_handouts_details(course_name, CONST_DEFAULT_LAB_NAME)
+        ############################################################################
 
-        print(handouts_df)
+        log("Getting (%s) course -> (%s) lab  handouts' details." % (course_name, CONST_DEFAULT_LAB_NAME), level=1)
 
-        sleep(10)
-    
+        handouts_df, error = self.get_handouts_details(course_name, CONST_DEFAULT_LAB_NAME)
+
+        return handouts_df, error
+
 
     def get_handouts_details(self, course_name, lab_name):
         """
@@ -333,7 +334,7 @@ class Crawler:
         while not found and sleep_counter < CONST_MAX_REFRESH_COUNT:
 
             log("Sleeping while the (%s) course -> (%s) lab -> more blade: handout list table is loading (%.2f).." \
-                % (course_name, lab_name, CONST_REFRESH_SLEEP_TIME), indent=4)
+                % (course_name, lab_name, CONST_REFRESH_SLEEP_TIME), level=3, indent=4)
 
             sleep(CONST_REFRESH_SLEEP_TIME)
 
@@ -348,7 +349,7 @@ class Crawler:
         if not found:
             error = "Could not load the (%s) course -> (%s) lab -> more blade: handout list table." \
                 % (course_name, lab_name)
-            log(error, indent=4)
+            log(error, level=0, indent=4)
 
             return handouts_df, error
 
@@ -360,7 +361,7 @@ class Crawler:
             error = "Expected to be in the (%s) course -> (%s) lab -> more blade (depth = 4). Current depth = %d." % \
                 (course_name, lab_name, blade_titles_cnt)
 
-            log(error, indent=4)
+            log(error, level=0, indent=4)
 
             return handouts_df, error
 
@@ -371,7 +372,7 @@ class Crawler:
             consumption_loaded = True
             
             log("Sleeping while the (%s) course -> (%s) lab -> more blade: handout list table is loading consumption data (%.2f).." \
-                % (course_name, lab_name, CONST_REFRESH_SLEEP_TIME), indent=4)
+                % (course_name, lab_name, CONST_REFRESH_SLEEP_TIME), level=3, indent=4)
 
             sleep(CONST_REFRESH_SLEEP_TIME)
 
@@ -409,7 +410,7 @@ class Crawler:
                     error = "(%s) course -> (%s) lab -> (%s) handout subscription details could not be read!" \
                         % (course_name, lab_name, handout_name)
                     
-                    log(error, indent=4)
+                    log(error, level=0, indent=4)
                     break
 
             if error is not None:
@@ -423,7 +424,7 @@ class Crawler:
                 'Subscription name', 'Subscription id', 'Subscription status', 'Subscription users'])
 
         log("Finished getting the (%s) course -> (%s) lab -> more blade: handout details" \
-            % (course_name, lab_name), indent=4)
+            % (course_name, lab_name), level=1)
 
         return handouts_df, error
 
@@ -451,7 +452,7 @@ class Crawler:
 
         while not sub_details_loaded and sub_sleep_counter < CONST_MAX_REFRESH_COUNT:
 
-            log("Sleeping while handout (%s) details are loading (%f).." % (handout_name, CONST_REFRESH_SLEEP_TIME), indent=5)
+            log("Sleeping while handout (%s) details are loading (%f).." % (handout_name, CONST_REFRESH_SLEEP_TIME), level=3, indent=4)
             sleep(CONST_REFRESH_SLEEP_TIME)
 
             try:
@@ -480,9 +481,9 @@ class Crawler:
             sub_sleep_counter += 1
 
         if sub_details_loaded:
-            log("Handout (%s) details were read." % (handout_name), indent=5)
+            log("(%s) handout details read." % (handout_name), level=1, indent=2)
         else:
-            log("Could not read Handout (%s) details" % (handout_name), indent=5)
+            log("Could not read (%s) handout details" % (handout_name), level=1, indent=2)
 
         return sub_details_loaded, sub_name, sub_id, sub_status, sub_user_email_list
 
