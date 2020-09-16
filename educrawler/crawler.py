@@ -2,6 +2,7 @@
 EduHub portal crawling module.
 """
 
+from datetime import datetime
 from time import sleep
 import pandas as pd
 import logging
@@ -171,15 +172,21 @@ class Crawler:
         return courses_df
    
 
-    def get_course_details(self, course_name):
+    def get_course_details_df(self, course_name):
         """
         Gets the details about the course, such us total consumption, list of 
             subscriptions and their usage.
 
         Arguments:
             course_name: name of the course
+        Returns:
+            details_df: pandas dataframe containing all the course's handouts and their details
+            error: error message if an error was encountered
         """
 
+        details_df = None
+
+        error = None
         found = False
         log("Looking for %s course details" % (course_name), level=1)
 
@@ -241,39 +248,52 @@ class Crawler:
             return None, error
 
         ############################################################################
-        # course overview -> "project" lab
+        # finding all the labs that belong to the course and getting their details
         ############################################################################
-
-        log("Loading (%s) course -> (%s) lab blade." % (course_name, CONST_DEFAULT_LAB_NAME), level=1)
-
-        found = False
 
         classroom_grid = self.client.find_element_by_class_name("ext-classroom-overview-assignment-grid")
         
-        entries = classroom_grid.find_elements_by_class_name("azc-grid-groupdata")
+        entries = classroom_grid.find_elements_by_class_name("ext-grid-clickable-link")
 
-        for entry in entries:
+        log("(%s) course has %d lab(s)." % (course_name, len(entries)), level=1)
 
-            element = entry.find_element_by_class_name("ext-grid-clickable-link")
+        for element in entries:
+            
+            lab_name = element.text.lower()
 
-            if element.text.lower() == CONST_DEFAULT_LAB_NAME.lower():
-                log("(%s) lab found" % (CONST_DEFAULT_LAB_NAME), level=2)
-                found = True
-                break
-        
-        if not found:
-            error = "Could not find (%s) lab. Returning." % (CONST_DEFAULT_LAB_NAME)
-            log(error, level=0, indent=2)
-            return None, error
+            log("Loading (%s) course -> (%s) lab blade." % (course_name, lab_name), level=1)
 
-        else:
             element.click()
 
-        ############################################################################
-        # "project" lab -> "more"
-        ############################################################################
+            handouts_df, error = self.get_lab_details(course_name, lab_name)
+            
+            if error is not None:
+                break
+            
+            if details_df is None:
+                details_df = handouts_df
+            else:
+                details_df = details_df.append(handouts_df)
 
-        log("Loading (%s) course -> (%s) lab -> more blade." % (course_name, CONST_DEFAULT_LAB_NAME), \
+        if error is None:
+            return details_df, error
+        else:
+            return None, error
+     
+
+    def get_lab_details(self, course_name, lab_name):
+        """
+        Gets the details (handouts' details) of a selected lab.
+
+        Arguments:
+            course_name: the name of the course
+            lab_name: the name of the lab
+
+        Returns:
+            handouts_df: pandas dataframe
+        """
+
+        log("Loading (%s) course -> (%s) lab -> more blade." % (course_name, lab_name), \
             level=1)
 
         sleep_counter = 0
@@ -292,7 +312,7 @@ class Crawler:
                 found = False
         
         if not found:
-            error = "Could not find 'more' button in the (%s) course -> (%s) lab blade. Returning." % (course_name, CONST_DEFAULT_LAB_NAME)
+            error = "Could not find 'more' button in the (%s) course -> (%s) lab blade. Returning." % (course_name, lab_name)
             log(error, level=0, indent=2)
             return None, error
             
@@ -302,9 +322,9 @@ class Crawler:
         # Gets details of all the handouts of a selected lab in a course
         ############################################################################
 
-        log("Getting (%s) course -> (%s) lab  handouts' details." % (course_name, CONST_DEFAULT_LAB_NAME), level=1)
+        log("Getting (%s) course -> (%s) lab  handouts' details." % (course_name, lab_name), level=1)
 
-        handouts_df, error = self.get_handouts_details(course_name, CONST_DEFAULT_LAB_NAME)
+        handouts_df, error = self.get_handouts_details(course_name, lab_name)
 
         return handouts_df, error
 
@@ -401,11 +421,12 @@ class Crawler:
                 
                 handout_link.click()
 
-                sub_status, sub_name, sub_id, sub_status, sub_user_email_list = self.get_handout_details(handout_name)
+                sub_status, sub_name, sub_id, sub_status, sub_user_email_list, crawltime_utc = self.get_handout_details(handout_name)
                 
                 if sub_status:
-                    data.append([handout_name, handout_budget, handout_consumed, handout_status, \
-                        sub_name, sub_id, sub_status, sub_user_email_list])
+                    data.append([course_name, lab_name, \
+                        handout_name, handout_budget, handout_consumed, handout_status, \
+                        sub_name, sub_id, sub_status, sub_user_email_list, crawltime_utc])
                 else:
                     error = "(%s) course -> (%s) lab -> (%s) handout subscription details could not be read!" \
                         % (course_name, lab_name, handout_name)
@@ -418,10 +439,9 @@ class Crawler:
 
             sleep_counter += 1
 
-
         handouts_df = pd.DataFrame(data, 
-            columns = ['Handout name', 'Handout budget', 'Handout consumed', 'Handout status', \
-                'Subscription name', 'Subscription id', 'Subscription status', 'Subscription users'])
+            columns = ['Course name', 'Lab name', 'Handout name', 'Handout budget', 'Handout consumed', 'Handout status', \
+                'Subscription name', 'Subscription id', 'Subscription status', 'Subscription users', 'Crawl time utc'])
 
         log("Finished getting the (%s) course -> (%s) lab -> more blade: handout details" \
             % (course_name, lab_name), level=1)
@@ -456,6 +476,8 @@ class Crawler:
             sleep(CONST_REFRESH_SLEEP_TIME)
 
             try:
+                crawl_time_utc_dt = datetime.utcnow()
+
                 sub_name = self.client.find_element_by_class_name("ext-classroom-handout-edit-subscription-name").text
                 sub_id = self.client.find_element_by_class_name("ext-classroom-handout-edit-subscription-id").text
                 sub_status = self.client.find_element_by_class_name("ext-classroom-handout-edit-subscription-status-data").text
@@ -485,7 +507,36 @@ class Crawler:
         else:
             log("Could not read (%s) handout details" % (handout_name), level=1, indent=2)
 
-        return sub_details_loaded, sub_name, sub_id, sub_status, sub_user_email_list
+        return sub_details_loaded, sub_name, sub_id, sub_status, sub_user_email_list, crawl_time_utc_dt
+
+
+    def get_eduhub_details(self):
+        """
+        Aggregates all the handout (subscriptions) details from all the courses/labs 
+            into a pandas dataframe.
+
+        """
+
+        eduhub_df = None
+
+        courses_df = self.get_courses_df()
+
+        for _, course in courses_df.iterrows():
+
+            course_df, error = self.get_course_details_df(course['Name'])
+        
+            if error is not None:
+                break
+            
+            if eduhub_df is None:
+                eduhub_df = course_df
+            else:
+                eduhub_df = eduhub_df.append(course_df)
+
+        if error is None:
+            return eduhub_df, error
+        else:
+            return None, error
 
 
     def quit(self):

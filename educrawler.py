@@ -35,21 +35,22 @@ def main():
     with open(args.fconfig, "r") as ymlfile:
         cfg = yaml.safe_load(ymlfile)
 
-    crawler = Crawler(cfg["login_email"], cfg["login_password"], hide=False)
+    # get the latest eduhub data
+    
+    # crawler = Crawler(cfg["login_email"], cfg["login_password"], hide=False)
 
-    #courses_df = crawler.get_courses_df()
-    #print(courses_df)
+    # eduhub_df, error = crawler.get_eduhub_details()
 
-    handouts_df, error = crawler.get_course_details("Urban analytics")
+    # if error is not None:
+    #     log(error, level=0)
+    # else:
+    #     print(eduhub_df)
 
-    if error is not None:
-        log(error, level=0)
-    else:
-        print(handouts_df)
+    # crawler.quit()
 
-    sleep(10)
+    # eduhub_df.to_csv("test.csv")
 
-    crawler.quit()
+
 
     log("Finished", level=0)
 
