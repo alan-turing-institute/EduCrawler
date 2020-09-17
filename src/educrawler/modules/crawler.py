@@ -12,16 +12,15 @@ from selenium.webdriver.chrome.options import Options
 
 from webdriver_manager.chrome import ChromeDriverManager
 
-from educrawler.utilities import log
+from src.educrawler.modules.utilities import log
 
-from educrawler.constants import (
+from src.educrawler.modules.constants import (
     CONST_PORTAL_ADDRESS,
     CONST_REFRESH_SLEEP_TIME,
     CONST_MAX_REFRESH_COUNT,
     CONST_SLEEP_TIME,
     CONST_MFA_SLEEP_TIME,
-    CONST_PORTAL_COURSES_ADDRESS,
-    CONST_DEFAULT_LAB_NAME
+    CONST_PORTAL_COURSES_ADDRESS
 )
 
 class Crawler:
@@ -43,6 +42,7 @@ class Crawler:
         Returns:
             client - webdriver client if login was successful, otherwise None
         """
+
 
         options = Options()
 
@@ -79,20 +79,45 @@ class Crawler:
             while sleep_wait and sleep_counter < CONST_MAX_REFRESH_COUNT:
                 log("Sleeping (%f).." % (CONST_REFRESH_SLEEP_TIME), level=3, indent=2)
                 sleep(CONST_REFRESH_SLEEP_TIME)
-
+                
+                # check if username error occured
                 try:
-                    element = self.client.find_element_by_id("idDiv_SAOTCAS_Title")
+                    _ = self.client.find_element_by_id('usernameError')
+                    error = True
+                    log("Username may be incorrect. Stopping.", level=0)
                 except:
+                    error = False
+
+                # check if password error occured
+                if not error: 
                     try:
-                        self.client.find_element_by_xpath("//input[@type='submit']")
-                        log("MFA approved!", level=1)
-                        sleep_wait = False
+                        _ = self.client.find_element_by_id('passwordError')
+                        error = True
+                        log("Password may be incorrect. Stopping.", level=0)
                     except:
-                        sleep_wait = True
+                        error = False
+
+                # wait for MFA approval if needed
+                if not error:                  
+                    try:
+                        _ = self.client.find_element_by_id("idDiv_SAOTCAS_Title")
+                    except:
+                        try:
+                            self.client.find_element_by_xpath("//input[@type='submit']")
+                            log("MFA approved!", level=1)
+                            sleep_wait = False
+                        except:
+                            sleep_wait = True
+                else:
+                    sleep_wait = False
                 
                 sleep_counter += 1 
 
-            if sleep_wait == True:
+            if error:
+                self.client.quit()
+                self.client = None
+
+            elif sleep_wait == True:
                 log("MFA was not approved! Stopping.", level=0)
                 
                 self.client.quit()

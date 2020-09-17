@@ -1,3 +1,6 @@
+# misc
+.vscode/
+
 # test files
 test_config.yml
 test.csv
