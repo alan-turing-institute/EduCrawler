@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Command line tool package for crawling the Education section of portal.azure.com.
+Command line tools package for crawling the Education section of portal.azure.com.
 
 Tomas Lazauskas
 """

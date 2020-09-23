@@ -1,5 +1,5 @@
 """
-Command line tool package for crawling the Education section of portal.azure.com.
+Command line tools package for crawling the Education section of portal.azure.com.
 
 Tomas Lazauskas
 """
@@ -34,7 +34,7 @@ def set_command_line_args():
 
     # Command line arguments
     parser = argparse.ArgumentParser(
-        description="Package for crawling the Education section of portal.azure.com."
+        description="Command line tools package for crawling the Education section of portal.azure.com."
     )
 
     parser.add_argument(
@@ -52,8 +52,10 @@ def set_command_line_args():
 
     subparser = parser.add_subparsers()
 
-    parser_courses = subparser.add_parser("course")
-    parser_courses.add_argument(
+    # courses
+
+    parser_c = subparser.add_parser("course")
+    parser_c.add_argument(
         "courses_action",
         default=CONST_ACTION_LIST,
         const=CONST_ACTION_LIST,
@@ -61,14 +63,31 @@ def set_command_line_args():
         choices=[CONST_ACTION_LIST],
     )
 
-    # parser_handout = subparser.add_parser("handout")
-    # parser_handout.add_argument(
-    #     "handout_action",
-    #     default=CONST_ACTION_LIST,
-    #     const=CONST_ACTION_LIST,
-    #     nargs="?",
-    #     choices=[CONST_ACTION_LIST],
-    # )
+    # handouts
+
+    parser_h = subparser.add_parser("handout")
+    parser_h.add_argument(
+        "handout_action",
+        default=CONST_ACTION_LIST,
+        const=CONST_ACTION_LIST,
+        nargs="?",
+        choices=[CONST_ACTION_LIST],
+    )
+
+    parser_h.add_argument(
+        "--course-name",
+        help="Name of course.",
+    )
+    
+    parser_h.add_argument(
+        "--lab-name",
+        help="Name of lab.",
+    )
+
+    parser_h.add_argument(
+        "--handout-name",
+        help="Name of handout.",
+    )
 
     args, _ = parser.parse_known_args()
 
@@ -112,8 +131,19 @@ def take_action(args, crawler):
 
     elif hasattr(args, "handout_action"):
 
+        if hasattr(args, "course_name"):
+            course_name = args.course_name
+        else:
+            course_name = None
+
         if args.handout_action == CONST_ACTION_LIST:
-            results_df = crawler.get_eduhub_details()
+            # all courses
+            if course_name is None:
+                results_df, _ = crawler.get_eduhub_details()
+            # specific course
+            else:
+                results_df, _ = crawler.get_course_details_df(course_name)
+
         else:
             log("Unrecognised subaction. Skipping.", level=0)
 
@@ -138,7 +168,7 @@ def output_result(output, result):
         return
 
     if output == CONST_OUTPUT_TABLE:
-        print(tabulate(result, headers="keys", tablefmt="psql"))
+        print(tabulate(result, headers="keys", tablefmt="psql", showindex=False))
 
     elif output == CONST_OUTPUT_CSV:
         output_file = "ec_output_%s.csv" % datetime.now().strftime(

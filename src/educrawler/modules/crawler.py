@@ -325,7 +325,8 @@ class Crawler:
                 "Loading (%s) course -> (%s) lab blade." % (course_name, lab_name),
                 level=1,
             )
-
+            
+            # FIX: issue here
             element.click()
 
             handouts_df, error = self.get_lab_details(course_name, lab_name)
@@ -390,6 +391,7 @@ class Crawler:
             log(error, level=0, indent=2)
             return None, error
 
+
         more_buttom.click()
 
         ############################################################################
@@ -431,8 +433,7 @@ class Crawler:
         while not found and sleep_counter < CONST_MAX_REFRESH_COUNT:
 
             log(
-                "Sleeping while the (%s) course -> (%s) lab " + \
-                    "-> more blade: handout list table is loading (%.2f).."
+                "Sleeping while the (%s) course -> (%s) lab -> more blade: handout list table is loading (%.2f).."
                 % (course_name, lab_name, CONST_REFRESH_SLEEP_TIME),
                 level=3,
                 indent=4,
@@ -452,8 +453,7 @@ class Crawler:
 
         if not found:
             error = (
-                "Could not load the (%s) course -> (%s) lab " + \
-                    "-> more blade: handout list table."
+                "Could not load the (%s) course -> (%s) lab -> more blade: handout list table."
                 % (course_name, lab_name)
             )
             log(error, level=0, indent=4)
@@ -468,8 +468,7 @@ class Crawler:
 
         if blade_titles_cnt != 4:
             error = (
-                "Expected to be in the (%s) course -> (%s) lab " + \
-                    "-> more blade (depth = 4). Current depth = %d."
+                "Expected to be in the (%s) course -> (%s) lab -> more blade (depth = 4). Current depth = %d."
                 % (course_name, lab_name, blade_titles_cnt)
             )
 
@@ -484,8 +483,7 @@ class Crawler:
             consumption_loaded = True
 
             log(
-                "Sleeping while the (%s) course -> (%s) lab " + \
-                    "-> more blade: handout list table is loading consumption data (%.2f).."
+                "Sleeping while the (%s) course -> (%s) lab -> more blade: handout list table is loading consumption data (%.2f).."
                 % (course_name, lab_name, CONST_REFRESH_SLEEP_TIME),
                 level=3,
                 indent=4,
@@ -551,8 +549,7 @@ class Crawler:
                     )
                 else:
                     error = (
-                        "(%s) course -> (%s) lab -> (%s) handout " + \
-                            "subscription details could not be read!"
+                        "(%s) course -> (%s) lab -> (%s) handout subscription details could not be read!"
                         % (course_name, lab_name, handout_name)
                     )
 
@@ -673,10 +670,13 @@ class Crawler:
             crawl_time_utc_dt,
         )
 
-    def get_eduhub_details(self):
+    def get_eduhub_details(self, course_name=None):
         """
-        Aggregates all the handout (subscriptions) details from all the courses/labs
+        Aggregates details of handouts (subscriptions) from courses/labs
             into a pandas dataframe.
+
+        Arguments:
+            course_name - name of a course
 
         """
 
@@ -685,7 +685,7 @@ class Crawler:
         courses_df = self.get_courses_df()
 
         for _, course in courses_df.iterrows():
-
+            
             course_df, error = self.get_course_details_df(course["Name"])
 
             if error is not None:
