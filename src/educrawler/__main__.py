@@ -136,13 +136,23 @@ def take_action(args, crawler):
         else:
             course_name = None
 
+        if hasattr(args, "lab_name"):
+            lab_name = args.lab_name
+        else:
+            lab_name = None
+
+        if hasattr(args, "handout_name"):
+            handout_name = args.handout_name
+        else:
+            handout_name = None
+
         if args.handout_action == CONST_ACTION_LIST:
             # all courses
             if course_name is None:
                 results_df, _ = crawler.get_eduhub_details()
-            # specific course
+            # specific course (optionally, specific lab, handout)
             else:
-                results_df, _ = crawler.get_course_details_df(course_name)
+                results_df, _ = crawler.get_course_details_df(course_name, lab_name, handout_name)
 
         else:
             log("Unrecognised subaction. Skipping.", level=0)

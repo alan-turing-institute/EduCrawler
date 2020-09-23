@@ -52,15 +52,40 @@ optional arguments:
 - Getting a list of all handouts and their details
 
 ```bash
-./ec handout list
+ec handout list
 ```
 
-- Getting a list of all handouts in a particular course
+- Getting details of all handouts in a particular course
 
 
 ```bash
-./ec handout list --course-name TEST
+ec handout list --course-name TEST
 ```
 
+```
+---------------+------------+-------------------+------------------+--------------------+------------------+---------------------+--------------------------------------+-----------------------+----------------------------------------------+----------------------------+
+| Course name   | Lab name   | Handout name      | Handout budget   | Handout consumed   | Handout status   | Subscription name   | Subscription id                      | Subscription status  | Subscription users                           | Crawl time utc             |
+|---------------+------------+-------------------+------------------+--------------------+------------------+---------------------+--------------------------------------+-----------------------+----------------------------------------------+---------------------------|
+| TEST          | project    | test_subscription | $2.00            | $0.00              | done             | test_subscription   | 35173fef-1b3b-40b8-9b44-94cc0eb46a48 | Canceled              | ['***']                                     | 2020-09-23 13:20:47.655825 |
++---------------+------------+-------------------+------------------+--------------------+------------------+---------------------+--------------------------------------+---------------------+------------------------------------------_----+----------------------------+
+```
 
-<!-- ./ec --fconfig test_config.yml handout list --course-name TEST --lab-name project --handout-name test_subscription -->
+- Getting details of all handouts in a particular course from a particular lab
+
+```bash
+ec handout list --course-name TEST --lab-name project
+```
+
+- Getting details of a particular handout in a particular course from a particular lab
+
+```bash
+ec handout list --course-name "Research Engineering" --lab-name "project" --handout-name "Tomas Lazauskas"
+```
+
+```
++----------------------+------------+-----------------+------------------+--------------------+------------------+---------------------+--------------------------------------+-----------------------+----------------------------------------------+----------------------------+
+| Course name          | Lab name   | Handout name    | Handout budget   | Handout consumed   | Handout status   | Subscription name   | Subscription id                      | Subscription status   | Subscription users                           | Crawl time utc             |
+|----------------------+------------+-----------------+------------------+--------------------+------------------+---------------------+--------------------------------------+-----------------------+----------------------------------------------+----------------------------|
+| Research Engineering | project    | Tomas Lazauskas | $300.00          | $165.95            | done             | Tomas Lazauskas     | 2514e52c-c175-42b1-81e7-c63c9d2765ce | Active                | ['***']                                      | 2020-09-23 13:47:07.161545 |
++----------------------+------------+-----------------+------------------+--------------------+------------------+---------------------+--------------------------------------+-----------------------+----------------------------------------------+----------------------------+
+```

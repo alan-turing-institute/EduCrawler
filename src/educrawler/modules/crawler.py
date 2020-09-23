@@ -220,13 +220,14 @@ class Crawler:
 
         return courses_df
 
-    def get_course_details_df(self, course_name):
+    def get_course_details_df(self, course_name, lab_name=None, handout_name=None):
         """
-        Gets the details about the course, such us total consumption, list of
-            subscriptions and their usage.
+        Gets the list of handouts in a course and their details. 
 
         Arguments:
-            course_name: name of the course
+            course_name: name of a course
+            lab_name: name of a lab (optional)
+            handout_name: name of a handout (optional)
         Returns:
             details_df: pandas dataframe containing all the course's handouts and their details
             error: error message if an error was encountered
@@ -319,17 +320,23 @@ class Crawler:
 
         for element in entries:
 
-            lab_name = element.text.lower()
+            el_lab_name = element.text.lower()
+
+            # are we are looking for a particular lab? 
+            if lab_name is not None and lab_name != el_lab_name:
+                continue
 
             log(
-                "Loading (%s) course -> (%s) lab blade." % (course_name, lab_name),
+                "Loading (%s) course -> (%s) lab blade." % (course_name, el_lab_name),
                 level=1,
             )
             
-            # FIX: issue here
             element.click()
 
-            handouts_df, error = self.get_lab_details(course_name, lab_name)
+            # give some time to load
+            sleep(CONST_SLEEP_TIME)
+
+            handouts_df, error = self.get_lab_details(course_name, el_lab_name, handout_name)
 
             if error is not None:
                 break
@@ -339,19 +346,23 @@ class Crawler:
             else:
                 details_df = details_df.append(handouts_df)
 
+            # if we found the lab, do not need to continue
+            if lab_name is not None and lab_name == el_lab_name:
+                break
+
         if error is None:
             return details_df, error
 
         return None, error
 
-    def get_lab_details(self, course_name, lab_name):
+    def get_lab_details(self, course_name, lab_name, handout_name=None):
         """
         Gets the details (handouts' details) of a selected lab.
 
         Arguments:
             course_name: the name of the course
             lab_name: the name of the lab
-
+            handout_name: name of a handout (optional)
         Returns:
             handouts_df: pandas dataframe
         """
@@ -404,11 +415,11 @@ class Crawler:
             level=1,
         )
 
-        handouts_df, error = self.get_handouts_details(course_name, lab_name)
+        handouts_df, error = self.get_handouts_details(course_name, lab_name, handout_name)
 
         return handouts_df, error
 
-    def get_handouts_details(self, course_name, lab_name):
+    def get_handouts_details(self, course_name, lab_name, handout_name=None):
         """
         Gets the details of all the handouts of a selected lab in a course and returns them as a
             pandas dataframe.
@@ -416,7 +427,7 @@ class Crawler:
         Arguments:
             course_name: the name of the course
             lab_name: the name of the lab
-
+            handout_name: name of a handout (optional)
         Returns:
             handouts_df: pandas dataframe
         """
@@ -430,6 +441,7 @@ class Crawler:
         found = False
         handout_list_table = None
 
+        # wait until handout list table is loading
         while not found and sleep_counter < CONST_MAX_REFRESH_COUNT:
 
             log(
@@ -497,30 +509,34 @@ class Crawler:
             )
 
             # Getting details for handouts/subscriptions
-            for handout in handout_list:
+            for el_handout in handout_list:
 
-                handout_details = handout.find_elements_by_class_name(
+                el_handout_details = el_handout.find_elements_by_class_name(
                     "azc-grid-cellContent"
                 )
 
-                if len(handout_details) < 6:
+                if len(el_handout_details) < 6:
                     # something wrong, incorrect number of cells
                     continue
 
-                handout_link = handout_details[0].find_element_by_class_name(
+                el_handout_link = el_handout_details[0].find_element_by_class_name(
                     "ext-grid-clickable-link"
                 )
 
-                handout_name = handout_link.text
-                handout_budget = handout_details[3].text.lower()
-                handout_consumed = handout_details[4].text.lower()
-                handout_status = handout_details[5].text.lower()
+                el_handout_name = el_handout_link.text
+                el_handout_budget = el_handout_details[3].text.lower()
+                el_handout_consumed = el_handout_details[4].text.lower()
+                el_handout_status = el_handout_details[5].text.lower()
 
-                if handout_consumed == "--":
+                if el_handout_consumed == "--":
                     consumption_loaded = False
                     break
+                
+                # are we are looking for a particular handout? 
+                if handout_name is not None and handout_name != el_handout_name:
+                    continue
 
-                handout_link.click()
+                el_handout_link.click()
 
                 (
                     sub_details_loaded,
@@ -529,17 +545,17 @@ class Crawler:
                     sub_status,
                     sub_user_email_list,
                     crawltime_utc,
-                ) = self.get_handout_details(handout_name)
+                ) = self.get_handout_details(el_handout_name)
 
                 if sub_details_loaded:
                     data.append(
                         [
                             course_name,
                             lab_name,
-                            handout_name,
-                            handout_budget,
-                            handout_consumed,
-                            handout_status,
+                            el_handout_name,
+                            el_handout_budget,
+                            el_handout_consumed,
+                            el_handout_status,
                             sub_name,
                             sub_id,
                             sub_status,
@@ -550,10 +566,14 @@ class Crawler:
                 else:
                     error = (
                         "(%s) course -> (%s) lab -> (%s) handout subscription details could not be read!"
-                        % (course_name, lab_name, handout_name)
+                        % (course_name, lab_name, el_handout_name)
                     )
 
                     log(error, level=0, indent=4)
+                    break
+                
+                # if we found the handout, do not need to continue
+                if handout_name is not None and handout_name == el_handout_name:
                     break
 
             if error is not None:
