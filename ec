@@ -1,10 +1,10 @@
+#!/usr/bin/env python
+
 """
-Package for crawling the Education section of portal.azure.com.
+Command line tool package for crawling the Education section of portal.azure.com.
 
 Tomas Lazauskas
 """
-
-#!/usr/bin/env python
 
 import sys
 import os

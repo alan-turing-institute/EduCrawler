@@ -1,5 +1,5 @@
 """
-Package for crawling the Education section of portal.azure.com.
+Command line tool package for crawling the Education section of portal.azure.com.
 
 Tomas Lazauskas
 """
