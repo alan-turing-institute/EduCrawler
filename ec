@@ -11,7 +11,7 @@ import os
 
 PDIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "src")
 
-if os.environ.get("PYTHONPATH") is None:
+if os.environ.get("PYTHONPATH") is None or len(os.environ.get("PYTHONPATH")) == 0:
     os.environ["PYTHONPATH"] = PDIR
 else:
     os.environ["PYTHONPATH"] = os.pathsep.join([dir, os.environ.get("PYTHONPATH"),])

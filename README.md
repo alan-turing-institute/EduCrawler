@@ -2,23 +2,27 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A command line experience for managing the Education section of portal.azure.com.
+A command line experience for interacting with the Education section of portal.azure.com.
 
 Created and designed by <a href="https://github.com/tomaslaz">Tomas Lazauskas</a>.
 
 ## Installation
 
+```bash
+pip install git+https://github.com/tangentlabs/django-oscar-paypal.git
+```
+
 ## Usage
 
 ```bash
-$ ec [ group ] [ command ] {parameters}
+$ ec [ optional arguments ] { group } { command } { parameters }
 ```
 
 ```bash
 usage: ec [-h] [--fconfig FCONFIG] [--output {table,csv,json}]
                    {course,handout} ...
 
-Command line tools package for crawling the Education section of
+A command line experience for interacting with the Education section of
 portal.azure.com.
 
 positional arguments:
@@ -36,7 +40,7 @@ optional arguments:
 - Getting a list of courses and their details (excl. Consumed)
 
 ```bash
-./ec course list
+ec course list
 ```
 
 ```

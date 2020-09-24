@@ -19,6 +19,7 @@ from src.educrawler.modules.constants import (
     CONST_MAX_REFRESH_COUNT,
     CONST_SLEEP_TIME,
     CONST_PORTAL_COURSES_ADDRESS,
+    CONST_VERBOSE_LEVEL
 )
 
 
@@ -48,6 +49,7 @@ class Crawler:
             options.add_argument("--headless")
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("--log-level=0")
 
         self.client = webdriver.Chrome(ChromeDriverManager().install(), options=options)
 

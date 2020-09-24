@@ -4,7 +4,7 @@ Command line tools package for crawling the Education section of portal.azure.co
 Tomas Lazauskas
 """
 
-from datetime import datetime
+import os
 import argparse
 import yaml
 import pandas as pd
@@ -20,13 +20,18 @@ from src.educrawler.modules.constants import (
     CONST_OUTPUT_LIST,
     CONST_OUTPUT_CSV,
     CONST_OUTPUT_JSON,
-    CONST_TIME_FILE_FORMAT,
+    CONST_DEFAULT_OUTPUT_FILE_NAME,
+    CONST_WEBDRIVER_HEADLESS,
+    CONST_VERBOSE_LEVEL,
 )
 
 
-def set_command_line_args():
+def set_command_line_args(default_output):
     """
     Sets up command line arguments.
+
+    Arguments:
+        default_output: default output type (table, csv, json, ..)
 
     Returns:
         args: command line arguments
@@ -34,19 +39,13 @@ def set_command_line_args():
 
     # Command line arguments
     parser = argparse.ArgumentParser(
-        description="Command line tools package for crawling the Education section of portal.azure.com."
-    )
-
-    parser.add_argument(
-        "--fconfig",
-        default=CONST_CONFIG_FILE,
-        help="YAML config file (default: %s)." % (CONST_CONFIG_FILE),
+        description="A command line experience for interacting with the Education section of portal.azure.com."
     )
 
     parser.add_argument(
         "--output",
-        default=CONST_OUTPUT_TABLE,
-        help="Output type (default: %s)." % (CONST_OUTPUT_TABLE),
+        default=default_output,
+        help="Output type (default: %s)." % (default_output),
         choices=CONST_OUTPUT_LIST,
     )
 
@@ -75,18 +74,15 @@ def set_command_line_args():
     )
 
     parser_h.add_argument(
-        "--course-name",
-        help="Name of course.",
-    )
-    
-    parser_h.add_argument(
-        "--lab-name",
-        help="Name of lab.",
+        "--course-name", help="Name of course.",
     )
 
     parser_h.add_argument(
-        "--handout-name",
-        help="Name of handout.",
+        "--lab-name", help="Name of lab.",
+    )
+
+    parser_h.add_argument(
+        "--handout-name", help="Name of handout.",
     )
 
     args, _ = parser.parse_known_args()
@@ -106,8 +102,13 @@ def read_config_file(fconfig):
 
     log("Reading in config file %s" % (fconfig), level=2)
 
-    with open(fconfig, "r") as ymlfile:
-        cfg = yaml.safe_load(ymlfile)
+    try:
+        with open(fconfig, "r") as ymlfile:
+            cfg = yaml.safe_load(ymlfile)
+    except:
+        log("Cannot read config file (%s). Stopping." % fconfig, level=0)
+
+        cfg = None
 
     return cfg
 
@@ -152,7 +153,9 @@ def take_action(args, crawler):
                 results_df, _ = crawler.get_eduhub_details()
             # specific course (optionally, specific lab, handout)
             else:
-                results_df, _ = crawler.get_course_details_df(course_name, lab_name, handout_name)
+                results_df, _ = crawler.get_course_details_df(
+                    course_name, lab_name, handout_name
+                )
 
         else:
             log("Unrecognised subaction. Skipping.", level=0)
@@ -181,13 +184,12 @@ def output_result(output, result):
         print(tabulate(result, headers="keys", tablefmt="psql", showindex=False))
 
     elif output == CONST_OUTPUT_CSV:
-        output_file = "ec_output_%s.csv" % datetime.now().strftime(
-            CONST_TIME_FILE_FORMAT
-        )
-        result.to_csv(output_file)
+
+        result.to_csv("%s.csv" % CONST_DEFAULT_OUTPUT_FILE_NAME)
 
     elif output == CONST_OUTPUT_JSON:
-        print(result.to_json(orient="records"))
+
+        result.to_json("%s.json" % CONST_DEFAULT_OUTPUT_FILE_NAME, orient="records")
 
     else:
         log("Unrecognised type of output. Skipping.", level=0)
@@ -198,32 +200,65 @@ def main():
     The main routine.
 
     """
+    status = True
 
     log("Crawler started", level=1)
 
-    # set up command line arguments
-    args = set_command_line_args()
+    os.environ["WDM_LOG_LEVEL"] = "%d" % CONST_VERBOSE_LEVEL
 
     # read in config file
-    config = read_config_file(args.fconfig)
+    config = read_config_file(CONST_CONFIG_FILE)
 
-    login_email = config["login_email"]
-    login_password = config["login_password"]
+    if config is None:
+        status = False
 
-    # instantiate the crawler
-    crawler = Crawler(login_email, login_password, hide=False)
+    if status:
+        try:
+            default_output = config["default_output"]
+        except:
+            default_output = CONST_OUTPUT_TABLE
 
-    # take the specified action
-    if crawler.client is not None:
-        result = take_action(args, crawler)
+        # set up command line arguments
+        args = set_command_line_args(default_output)
 
-    crawler.quit()
+        login_email = config["login_email"]
+        login_password = config["login_password"]
 
-    if result is not None:
-        output_result(args.output, result)
+        if (
+            login_email is None
+            or login_password is None
+            or len(login_email) == 0
+            or len(login_password) == 0
+        ):
+
+            message = "Missing login credentials. Please check the configuration yaml file. Exiting."
+            log(message, level=0)
+
+            status = False
+
+    if status:
+        result = None
+
+        try:
+            webdriver_headless = config["webdriver_headless"]
+        except:
+            webdriver_headless = CONST_WEBDRIVER_HEADLESS
+
+        # instantiate the crawler
+        crawler = Crawler(login_email, login_password, hide=webdriver_headless)
+
+        # take the specified action
+        if crawler.client is not None:
+            result = take_action(args, crawler)
+
+        crawler.quit()
+
+        if result is not None:
+            output_result(args.output, result)
 
     log("Crawler finished", level=1)
 
 
 if __name__ == "__main__":
+
     main()

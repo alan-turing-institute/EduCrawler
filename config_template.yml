@@ -1,2 +1,4 @@
-login_email: 
-login_password: 
+login_email: email@example.com.
+login_password: password
+webdriver_headless: false
+default_output: table

@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 
 from src.educrawler.modules.constants import CONST_VERBOSE_LEVEL
 
-
 def log(message, level=3, indent=0):
     """
     Log output to screen.
