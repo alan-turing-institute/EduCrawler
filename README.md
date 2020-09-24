@@ -9,7 +9,7 @@ Created and designed by <a href="https://github.com/tomaslaz">Tomas Lazauskas</a
 ## Installation
 
 ```bash
-pip install git+https://github.com/tangentlabs/django-oscar-paypal.git
+pip install git+https://github.com/tomaslaz/eduhub_crawler.git
 ```
 
 ## Usage
