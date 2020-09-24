@@ -1,4 +1,4 @@
 login_email: email@example.com.
 login_password: password
-webdriver_headless: false
+webdriver_headless: true
 default_output: table
