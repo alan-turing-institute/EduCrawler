@@ -11,9 +11,9 @@ from selenium.webdriver.chrome.options import Options
 
 from webdriver_manager.chrome import ChromeDriverManager
 
-from src.educrawler.modules.utilities import log
+from educrawler.utilities import log
 
-from src.educrawler.modules.constants import (
+from educrawler.constants import (
     CONST_PORTAL_ADDRESS,
     CONST_REFRESH_SLEEP_TIME,
     CONST_MAX_REFRESH_COUNT,

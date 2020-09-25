@@ -11,9 +11,9 @@ import pandas as pd
 
 from tabulate import tabulate
 
-from src.educrawler.modules.crawler import Crawler
-from src.educrawler.modules.utilities import log
-from src.educrawler.modules.constants import (
+from educrawler.crawler import Crawler
+from educrawler.utilities import log
+from educrawler.constants import (
     CONST_CONFIG_FILE,
     CONST_ACTION_LIST,
     CONST_OUTPUT_TABLE,

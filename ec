@@ -9,7 +9,7 @@ Tomas Lazauskas
 import sys
 import os
 
-PDIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "src")
+PDIR = os.path.dirname(os.path.realpath(__file__))
 
 if os.environ.get("PYTHONPATH") is None or len(os.environ.get("PYTHONPATH")) == 0:
     os.environ["PYTHONPATH"] = PDIR
