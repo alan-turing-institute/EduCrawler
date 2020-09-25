@@ -205,4 +205,7 @@ setup(
 
     # scripts
     scripts=['ec'],
+
+    #license
+    license='MIT',
 )
