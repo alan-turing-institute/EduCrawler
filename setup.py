@@ -202,4 +202,7 @@ setup(
     #     'Say Thanks!': 'http://saythanks.io/to/example',
     #     'Source': 'https://github.com/pypa/sampleproject/',
     # },
+
+    # scripts
+    scripts=['bin/create_symbolic_link'],
 )
