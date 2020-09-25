@@ -204,5 +204,5 @@ setup(
     # },
 
     # scripts
-    scripts=['bin/create_symbolic_link'],
+    scripts=['ec'],
 )
