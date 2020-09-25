@@ -12,6 +12,20 @@ Created and designed by <a href="https://github.com/tomaslaz">Tomas Lazauskas</a
 pip install git+https://github.com/tomaslaz/eduhub_crawler.git
 ```
 
+## Setup
+
+Set the required and optional environmental parameters (recommended by modifying the `~/.bash_profile` file).
+
+```bash
+# EduCrawler
+export EC_EMAIL="example@mail.com" # required
+export EC_PASSWORD="password" # required
+export EC_VERBOSE_LEVEL=2 # optional (choices: 0-4, 0 - min, 4 - max)
+export EC_DEFAULT_OUTPUT="table" # optional (choices: json, csv, table)
+```
+
+Do not forget either restart the terminal or use the `source` command to effect the changes.
+
 ## Usage
 
 ```bash
@@ -19,8 +33,7 @@ $ ec [ optional arguments ] { group } { command } { parameters }
 ```
 
 ```bash
-usage: ec [-h] [--fconfig FCONFIG] [--output {table,csv,json}]
-                   {course,handout} ...
+usage: ec [-h] [--output {table,csv,json}] {course,handout} ...
 
 A command line experience for interacting with the Education section of
 portal.azure.com.
@@ -30,7 +43,6 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --fconfig FCONFIG     YAML config file (default: config.yml).
   --output {table,csv,json}
                         Output type (default: table).
 ```

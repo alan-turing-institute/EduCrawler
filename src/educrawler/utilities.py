@@ -1,10 +1,12 @@
 """
 Utilities module.
 """
+import os
 
 from datetime import datetime, timezone
 
 from educrawler.constants import CONST_VERBOSE_LEVEL
+
 
 def log(message, level=3, indent=0):
     """

@@ -14,7 +14,6 @@ from tabulate import tabulate
 from educrawler.crawler import Crawler
 from educrawler.utilities import log
 from educrawler.constants import (
-    CONST_CONFIG_FILE,
     CONST_ACTION_LIST,
     CONST_OUTPUT_TABLE,
     CONST_OUTPUT_LIST,
@@ -88,29 +87,6 @@ def set_command_line_args(default_output):
     args, _ = parser.parse_known_args()
 
     return args
-
-
-def read_config_file(fconfig):
-    """
-    Parses config yaml file
-
-    Arguments:
-        fconfig: path to the configuration file
-    Returns:
-        cfg: data object of the parsed config yaml file
-    """
-
-    log("Reading in config file %s" % (fconfig), level=2)
-
-    try:
-        with open(fconfig, "r") as ymlfile:
-            cfg = yaml.safe_load(ymlfile)
-    except:
-        log("Cannot read config file (%s). Stopping." % fconfig, level=0)
-
-        cfg = None
-
-    return cfg
 
 
 def take_action(args, crawler):
@@ -206,38 +182,35 @@ def main():
 
     os.environ["WDM_LOG_LEVEL"] = "%d" % CONST_VERBOSE_LEVEL
 
-    # read in config file
-    config = read_config_file(CONST_CONFIG_FILE)
+    try:
+        default_output = os.environ["EC_DEFAULT_OUTPUT"]
+    except:
+        default_output = CONST_OUTPUT_TABLE
 
-    if config is None:
+    try:
+        login_email = os.environ["EC_EMAIL"]
+        login_password = os.environ["EC_PASSWORD"]
+    except:
+        login_email = None
+        login_password = None
+
+    if (
+        login_email is None
+        or login_password is None
+        or len(login_email) == 0
+        or len(login_password) == 0
+    ):
+
+        message = "Missing login credentials. Have you set the environmental parameters? Exiting."
+        log(message, level=0)
+
         status = False
 
     if status:
-        try:
-            default_output = config["default_output"]
-        except:
-            default_output = CONST_OUTPUT_TABLE
+        result = None
 
         # set up command line arguments
         args = set_command_line_args(default_output)
-
-        login_email = config["login_email"]
-        login_password = config["login_password"]
-
-        if (
-            login_email is None
-            or login_password is None
-            or len(login_email) == 0
-            or len(login_password) == 0
-        ):
-
-            message = "Missing login credentials. Please check the configuration yaml file. Exiting."
-            log(message, level=0)
-
-            status = False
-
-    if status:
-        result = None
 
         try:
             webdriver_headless = config["webdriver_headless"]
