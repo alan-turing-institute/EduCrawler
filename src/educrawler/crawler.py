@@ -663,7 +663,10 @@ class Crawler:
                 
                 if len(sub_status_data) == 2:
                     sub_status = sub_status_data[0].text
-                    sub_expiry_date = datetime.strptime(sub_status_data[1].text, "%b %d, %Y").strftime("%Y-%m-%d")
+                    try:
+                        sub_expiry_date = datetime.strptime(sub_status_data[1].text, "%b %d, %Y").strftime("%Y-%m-%d")
+                    except:
+                        sub_expiry_date = ""
 
                 if sub_name == handout_name and len(user_email_list) > 0:
                     sub_details_loaded = True
