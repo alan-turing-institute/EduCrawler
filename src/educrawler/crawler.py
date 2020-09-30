@@ -545,6 +545,7 @@ class Crawler:
                     sub_name,
                     sub_id,
                     sub_status,
+                    sub_expiry_date,
                     sub_user_email_list,
                     crawltime_utc,
                 ) = self.get_handout_details(el_handout_name)
@@ -561,6 +562,7 @@ class Crawler:
                             sub_name,
                             sub_id,
                             sub_status,
+                            sub_expiry_date,
                             sub_user_email_list,
                             crawltime_utc,
                         ]
@@ -595,6 +597,7 @@ class Crawler:
                 "Subscription name",
                 "Subscription id",
                 "Subscription status",
+                "Subscription expiry date",
                 "Subscription users",
                 "Crawl time utc",
             ],
@@ -619,7 +622,7 @@ class Crawler:
 
         Returns:
             sub_details_loaded: a flag indicating if subscription details were read successfully
-            sub_name, sub_id, sub_status, sub_user_email_list
+            sub_name, sub_id, sub_status, sub_expiry_date, sub_user_email_list
         """
 
         sub_sleep_counter = 0
@@ -627,6 +630,7 @@ class Crawler:
         sub_name = None
         sub_id = None
         sub_status = None
+        sub_expiry_date = None
         sub_user_email_list = []
 
         while not sub_details_loaded and sub_sleep_counter < CONST_MAX_REFRESH_COUNT:
@@ -648,12 +652,18 @@ class Crawler:
                 sub_id = self.client.find_element_by_class_name(
                     "ext-classroom-handout-edit-subscription-id"
                 ).text
-                sub_status = self.client.find_element_by_class_name(
-                    "ext-classroom-handout-edit-subscription-status-data"
-                ).text
+
                 user_email_list = self.client.find_elements_by_class_name(
                     "ext-classroom-handout-edit-user-email"
                 )
+
+                sub_status_data = self.client.find_elements_by_class_name(
+                    "ext-classroom-handout-edit-subscription-status-data"
+                )
+                
+                if len(sub_status_data) == 2:
+                    sub_status = sub_status_data[0].text
+                    sub_expiry_date = datetime.strptime(sub_status_data[1].text, "%b %d, %Y").strftime("%Y-%m-%d")
 
                 if sub_name == handout_name and len(user_email_list) > 0:
                     sub_details_loaded = True
@@ -670,7 +680,7 @@ class Crawler:
                         sub_user_email_list.append(user_email)
 
             except:
-                sub_details_loaded = False
+               sub_details_loaded = False
 
             sub_sleep_counter += 1
 
@@ -688,6 +698,7 @@ class Crawler:
             sub_name,
             sub_id,
             sub_status,
+            sub_expiry_date,
             sub_user_email_list,
             crawl_time_utc_dt,
         )
