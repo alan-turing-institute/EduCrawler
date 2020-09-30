@@ -57,6 +57,8 @@ class Crawler:
 
         self.client.get(CONST_PORTAL_ADDRESS)
 
+        sleep(CONST_SLEEP_TIME)
+
         # entering email address
         self.client.find_element_by_xpath("//input[@type='email']").send_keys(
             login_email
@@ -311,6 +313,8 @@ class Crawler:
         ############################################################################
         # finding all the labs that belong to the course and getting their details
         ############################################################################
+
+        sleep(CONST_SLEEP_TIME)
 
         classroom_grid = self.client.find_element_by_class_name(
             "ext-classroom-overview-assignment-grid"
