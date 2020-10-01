@@ -105,3 +105,9 @@ ec handout list --course-name "Research Engineering" --lab-name "project" --hand
 | Research Engineering | project    | Tomas Lazauskas | $300.00          | $166.90            | done             | Tomas Lazauskas     | ***                                  | Active                | 2020-09-30                 | ['***']                                      | 2020-09-30 10:25:27.822008 |
 +----------------------+------------+-----------------+------------------+--------------------+------------------+---------------------+--------------------------------------+-----------------------+----------------------------+----------------------------------------------+----------------------------+
 ```
+
+- Updating details of a particular handout
+
+```bash
+ec handout update --course-name "Research Engineering" --lab-name "project" --subscription "Tomas Lazauskas"
+```

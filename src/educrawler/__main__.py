@@ -15,6 +15,7 @@ from educrawler.crawler import Crawler
 from educrawler.utilities import log
 from educrawler.constants import (
     CONST_ACTION_LIST,
+    CONST_ACTION_UPDATE,
     CONST_OUTPUT_TABLE,
     CONST_OUTPUT_LIST,
     CONST_OUTPUT_CSV,
@@ -69,7 +70,7 @@ def set_command_line_args(default_output):
         default=CONST_ACTION_LIST,
         const=CONST_ACTION_LIST,
         nargs="?",
-        choices=[CONST_ACTION_LIST],
+        choices=[CONST_ACTION_LIST, CONST_ACTION_UPDATE],
     )
 
     parser_h.add_argument(
@@ -82,6 +83,10 @@ def set_command_line_args(default_output):
 
     parser_h.add_argument(
         "--handout-name", help="Name of handout.",
+    )
+
+    parser_h.add_argument(
+        "--subscription", help="Name or ID of subscription.",
     )
 
     args, _ = parser.parse_known_args()
@@ -123,6 +128,13 @@ def take_action(args, crawler):
         else:
             handout_name = None
 
+        if hasattr(args, "subscription"):
+            subscription = args.subscription
+        else:
+            subscription = None
+
+        # TODO: using handout name and subscription
+
         if args.handout_action == CONST_ACTION_LIST:
             # all courses
             if course_name is None:
@@ -132,6 +144,26 @@ def take_action(args, crawler):
                 results_df, _ = crawler.get_course_details_df(
                     course_name, lab_name, handout_name
                 )
+        elif args.handout_action == CONST_ACTION_UPDATE:
+            
+            if hasattr(args, "status"):
+                status = args.status
+            else:
+                status = None
+            
+            if hasattr(args, "budget"):
+                budget = args.budget
+            else:
+                budget = None
+
+            if hasattr(args, "expiry_date"):
+                expiry_date = args.expiry_date
+            else:
+                expiry_date = None
+
+            # check if neccessary arguments are provided.
+
+            print("Updating ")
 
         else:
             log("Unrecognised subaction. Skipping.", level=0)
