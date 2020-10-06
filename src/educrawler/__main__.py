@@ -213,7 +213,7 @@ def main():
         args = set_command_line_args(default_output)
 
         try:
-            webdriver_headless = config["webdriver_headless"]
+            webdriver_headless = os.environ["EC_HIDE"].lower() == 'true'
         except:
             webdriver_headless = CONST_WEBDRIVER_HEADLESS
 
