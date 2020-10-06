@@ -22,6 +22,7 @@ export EC_EMAIL="example@mail.com" # required
 export EC_PASSWORD="password" # required
 export EC_VERBOSE_LEVEL=2 # optional (choices: 0-4, 0 - min, 4 - max)
 export EC_DEFAULT_OUTPUT="table" # optional (choices: json, csv, table)
+export EC_HIDE=true # 
 ```
 
 Do not forget either restart the terminal or use the `source` command to effect the changes.
