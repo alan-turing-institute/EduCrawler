@@ -218,7 +218,7 @@ def main():
             webdriver_headless = CONST_WEBDRIVER_HEADLESS
 
         try:
-            if os.environ["EC_MFA"].lower() == 'False':
+            if os.environ["EC_MFA"].lower() == 'false':
                 mfa_on = False
             else:
                 mfa_on = True
