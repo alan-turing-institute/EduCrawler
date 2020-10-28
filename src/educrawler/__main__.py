@@ -217,8 +217,16 @@ def main():
         except:
             webdriver_headless = CONST_WEBDRIVER_HEADLESS
 
+        try:
+            if os.environ["EC_MFA"].lower() == 'False':
+                mfa_on = False
+            else:
+                mfa_on = True
+        except:
+            mfa_on = True
+
         # instantiate the crawler
-        crawler = Crawler(login_email, login_password, hide=webdriver_headless)
+        crawler = Crawler(login_email, login_password, hide=webdriver_headless, mfa=mfa_on)
 
         # take the specified action
         if crawler.client is not None:

@@ -22,7 +22,8 @@ export EC_EMAIL="example@mail.com" # required
 export EC_PASSWORD="password" # required
 export EC_VERBOSE_LEVEL=2 # optional (choices: 0-4, 0 - min, 4 - max)
 export EC_DEFAULT_OUTPUT="table" # optional (choices: json, csv, table)
-export EC_HIDE=true # 
+export EC_HIDE=true # optional (default: true) # hide browser
+export EC_MFA=true # optional (default: true) # authetication uses mfa
 ```
 
 Do not forget either restart the terminal or use the `source` command to effect the changes.
@@ -106,3 +107,9 @@ ec handout list --course-name "Research Engineering" --lab-name "project" --hand
 | Research Engineering | project    | Tomas Lazauskas | $300.00          | $166.90            | done             | Tomas Lazauskas     | ***                                  | Active                | 2020-09-30                 | ['***']                                      | 2020-09-30 10:25:27.822008 |
 +----------------------+------------+-----------------+------------------+--------------------+------------------+---------------------+--------------------------------------+-----------------------+----------------------------+----------------------------------------------+----------------------------+
 ```
+
+## Getting help
+If you found a bug or need support, please submit an issue [here](https://github.com/tomaslaz/EduCrawler/issues/new).
+
+## How to contribute
+We welcome contributions! If you are willing to propose new features or have bug fixes to contribute, please submit a pull request [here](https://github.com/tomaslaz/EduCrawler/pulls).
