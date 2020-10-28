@@ -128,9 +128,10 @@ class Crawler:
 
                 self.client.quit()
                 self.client = None
-            else:
-                self.client.find_element_by_xpath("//input[@type='submit']").click()
-                sleep(CONST_SLEEP_TIME)
+        
+        # stay signed in
+        self.client.find_element_by_xpath("//input[@type='submit']").click()
+        sleep(CONST_SLEEP_TIME)
 
     def get_courses(self):
         """
