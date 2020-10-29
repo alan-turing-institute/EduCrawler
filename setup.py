@@ -147,9 +147,10 @@ setup(
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
-        webdriver-manager,
-        pandas,
-        tabulate,
+        'selenium>=3.141.0',
+        'webdriver-manager>=3.2.2',
+        'pandas>=0.25.3',
+        'tabulate>=0.8.7',
     ],  # Optional
 
     # List additional groups of dependencies here (e.g. development
