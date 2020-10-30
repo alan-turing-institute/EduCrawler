@@ -20,7 +20,7 @@ Set the required and optional environmental parameters (recommended by modifying
 # EduCrawler
 export EC_EMAIL="example@mail.com" # required
 export EC_PASSWORD="password" # required
-export EC_VERBOSE_LEVEL=2 # optional (choices: 0-4, 0 - min, 4 - max)
+export EC_VERBOSE_LEVEL=2 # optional (choices: 0-4, 0 - min, 4 - max, default: 2)
 export EC_DEFAULT_OUTPUT="table" # optional (choices: json, csv, table)
 export EC_HIDE=true # optional (default: true) # hide browser
 export EC_MFA=true # optional (default: true) # authetication uses mfa

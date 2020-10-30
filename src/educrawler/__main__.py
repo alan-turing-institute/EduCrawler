@@ -6,24 +6,14 @@ Tomas Lazauskas
 
 import os
 import argparse
-import yaml
-import pandas as pd
 
-from tabulate import tabulate
+from educrawler.crawler import crawl
 
-from educrawler.crawler import Crawler
-from educrawler.utilities import log
 from educrawler.constants import (
+    CONST_OUTPUT_LIST,
     CONST_ACTION_LIST,
     CONST_OUTPUT_TABLE,
-    CONST_OUTPUT_LIST,
-    CONST_OUTPUT_CSV,
-    CONST_OUTPUT_JSON,
-    CONST_DEFAULT_OUTPUT_FILE_NAME,
-    CONST_WEBDRIVER_HEADLESS,
-    CONST_VERBOSE_LEVEL,
 )
-
 
 def set_command_line_args(default_output):
     """
@@ -38,7 +28,8 @@ def set_command_line_args(default_output):
 
     # Command line arguments
     parser = argparse.ArgumentParser(
-        description="A command line experience for interacting with the Education section of portal.azure.com."
+        description="A command line experience for interacting with " + \
+            "the Education section of portal.azure.com."
     )
 
     parser.add_argument(
@@ -89,156 +80,22 @@ def set_command_line_args(default_output):
     return args
 
 
-def take_action(args, crawler):
-    """
-    The main routine to handle all command line actions.
-
-    Arguments:
-        args: command line arguments
-        crawler: eduhub crawler object
-
-    """
-    results_df = None
-
-    if hasattr(args, "courses_action"):
-        if args.courses_action == CONST_ACTION_LIST:
-            results_df = crawler.get_courses_df()
-        else:
-            log("Unrecognised subaction. Skipping.", level=0)
-
-    elif hasattr(args, "handout_action"):
-
-        if hasattr(args, "course_name"):
-            course_name = args.course_name
-        else:
-            course_name = None
-
-        if hasattr(args, "lab_name"):
-            lab_name = args.lab_name
-        else:
-            lab_name = None
-
-        if hasattr(args, "handout_name"):
-            handout_name = args.handout_name
-        else:
-            handout_name = None
-
-        if args.handout_action == CONST_ACTION_LIST:
-            # all courses
-            if course_name is None:
-                results_df, _ = crawler.get_eduhub_details()
-            # specific course (optionally, specific lab, handout)
-            else:
-                results_df, _ = crawler.get_course_details_df(
-                    course_name, lab_name, handout_name
-                )
-
-        else:
-            log("Unrecognised subaction. Skipping.", level=0)
-
-    else:
-        log("Unrecognised/unspecified action. Skipping.", level=0)
-
-    return results_df
-
-
-def output_result(output, result):
-    """
-    Outputs result of the action (if any) in the chosen format.
-
-    Argument:
-        output: command line argument for output
-        result: result object of the previously taken action
-
-    """
-
-    if not isinstance(result, pd.DataFrame):
-        log("Expecting result as pandas dataframe. Got %s" % (type(result)), level=0)
-        return
-
-    if output == CONST_OUTPUT_TABLE:
-        print(tabulate(result, headers="keys", tablefmt="psql", showindex=False))
-
-    elif output == CONST_OUTPUT_CSV:
-
-        result.to_csv("%s.csv" % CONST_DEFAULT_OUTPUT_FILE_NAME)
-
-    elif output == CONST_OUTPUT_JSON:
-
-        result.to_json("%s.json" % CONST_DEFAULT_OUTPUT_FILE_NAME, orient="records")
-
-    else:
-        log("Unrecognised type of output. Skipping.", level=0)
-
-
 def main():
     """
     The main routine.
 
     """
-    status = True
-
-    log("Crawler started", level=1)
-
-    os.environ["WDM_LOG_LEVEL"] = "%d" % CONST_VERBOSE_LEVEL
 
     try:
-        default_output = os.environ["EC_DEFAULT_OUTPUT"]
-    except:
+        default_output = os.environ["EC_DEFAULT_OUTPUT1"]
+    except KeyError:
         default_output = CONST_OUTPUT_TABLE
 
-    try:
-        login_email = os.environ["EC_EMAIL"]
-        login_password = os.environ["EC_PASSWORD"]
-    except:
-        login_email = None
-        login_password = None
+    # set up command line arguments
+    args = set_command_line_args(default_output)
 
-    if (
-        login_email is None
-        or login_password is None
-        or len(login_email) == 0
-        or len(login_password) == 0
-    ):
-
-        message = "Missing login credentials. Have you set the environmental parameters? Exiting."
-        log(message, level=0)
-
-        status = False
-
-    if status:
-        result = None
-
-        # set up command line arguments
-        args = set_command_line_args(default_output)
-
-        try:
-            webdriver_headless = os.environ["EC_HIDE"].lower() == 'true'
-        except:
-            webdriver_headless = CONST_WEBDRIVER_HEADLESS
-
-        try:
-            if os.environ["EC_MFA"].lower() == 'false':
-                mfa_on = False
-            else:
-                mfa_on = True
-        except:
-            mfa_on = True
-
-        # instantiate the crawler
-        crawler = Crawler(login_email, login_password, hide=webdriver_headless, mfa=mfa_on)
-
-        # take the specified action
-        if crawler.client is not None:
-            result = take_action(args, crawler)
-
-        crawler.quit()
-
-        if result is not None:
-            output_result(args.output, result)
-
-    log("Crawler finished", level=1)
-
+    # run the crawl
+    crawl(args)
 
 if __name__ == "__main__":
 
