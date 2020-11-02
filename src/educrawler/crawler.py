@@ -31,6 +31,7 @@ from educrawler.constants import (
     CONST_OUTPUT_LIST,
     CONST_OUTPUT_CSV,
     CONST_OUTPUT_JSON,
+    CONST_OUTPUT_DF,
     CONST_DEFAULT_OUTPUT_FILE_NAME,
     CONST_WEBDRIVER_HEADLESS,
 )
@@ -778,14 +779,15 @@ def crawl(args):
 
     """
 
+    return_result = None
+
     # check if any action is specified
     if (hasattr(args, "courses_action") or hasattr(args, "handout_action")):
         status = True
     else:
         status = False
         log("Unrecognised/unspecified action. Skipping.", level=0)
-        return
-    
+
     if status:
         log("Crawler started", level=1)
 
@@ -836,9 +838,14 @@ def crawl(args):
         crawler.quit()
 
         if result is not None:
-            _output_result(args.output, result)
+            if args.output != CONST_OUTPUT_DF:
+                _output_result(args.output, result)
+            else:
+                return_result = result
 
     log("Crawler finished", level=1)
+
+    return status, return_result
 
 
 def _take_action(args, crawler):
