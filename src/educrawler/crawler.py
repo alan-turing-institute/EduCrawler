@@ -4,7 +4,7 @@ EduHub portal crawling module.
 
 import os
 from datetime import datetime
-from time import sleep
+from time import sleep, time
 import pandas as pd
 
 import yaml
@@ -24,6 +24,7 @@ from educrawler.constants import (
     CONST_REFRESH_SLEEP_TIME,
     CONST_MAX_REFRESH_COUNT,
     CONST_SLEEP_TIME,
+    CONST_TIMEOUT,
     CONST_PORTAL_COURSES_ADDRESS,
     CONST_VERBOSE_LEVEL,
     CONST_ACTION_LIST,
@@ -57,6 +58,9 @@ class Crawler:
             client - webdriver client if login was successful, otherwise None
         """
 
+        success = True
+        error = None
+
         options = Options()
 
         if hide:
@@ -66,6 +70,8 @@ class Crawler:
             options.add_argument("--log-level=0")
 
         self.client = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+
+        #self.client.implicitly_wait(30)
 
         log("Logging to %s as %s" % (CONST_PORTAL_ADDRESS, login_email), level=1)
 
@@ -81,16 +87,38 @@ class Crawler:
 
         sleep(CONST_SLEEP_TIME)
 
-        # entering password
-        self.client.find_element_by_xpath("//input[@name='passwd']").send_keys(
-            login_pass
-        )
-        self.client.find_element_by_xpath("//input[@type='submit']").click()
+        # check if username error occured
+        try:
+            test = self.client.find_element_by_id("usernameError")
+            print(test)
+            success = False
+            error = "Username might be incorrect. Stopping."
+            log(error, level=0)
+        except:
+            success = True
 
-        sleep(CONST_SLEEP_TIME)
+        if success:
+
+            # entering password
+            self.client.find_element_by_xpath("//input[@name='passwd']").send_keys(
+                login_pass
+            )
+            self.client.find_element_by_xpath("//input[@type='submit']").click()
+
+            sleep(CONST_SLEEP_TIME)
+
+            # check if password error occured
+            try:
+                _ = self.client.find_element_by_id("passwordError")
+                success = False
+                error = "Password might be incorrect. Stopping."
+                log(error, level=0)
+            except:
+                error = False
 
         # wait until the mfa has been approved
-        if mfa:
+        if success and mfa:
+
             log("Waiting for MFA approval.", level=1)
 
             sleep_counter = 0
@@ -100,69 +128,64 @@ class Crawler:
                 log("Sleeping (%f).." % (CONST_REFRESH_SLEEP_TIME), level=3, indent=2)
                 sleep(CONST_REFRESH_SLEEP_TIME)
 
-                # check if username error occured
-                try:
-                    _ = self.client.find_element_by_id("usernameError")
-                    error = True
-                    log("Username may be incorrect. Stopping.", level=0)
-                except:
-                    error = False
-
-                # check if password error occured
-                if not error:
-                    try:
-                        _ = self.client.find_element_by_id("passwordError")
-                        error = True
-                        log("Password may be incorrect. Stopping.", level=0)
-                    except:
-                        error = False
-
                 # wait for MFA approval if needed
-                if not error:
+                try:
+                    _ = self.client.find_element_by_id("idDiv_SAOTCAS_Title")
+                except:
                     try:
-                        _ = self.client.find_element_by_id("idDiv_SAOTCAS_Title")
+                        self.client.find_element_by_xpath("//input[@type='submit']")
+                        log("MFA approved!", level=1)
+                        sleep_wait = False
                     except:
-                        try:
-                            self.client.find_element_by_xpath("//input[@type='submit']")
-                            log("MFA approved!", level=1)
-                            sleep_wait = False
-                        except:
-                            sleep_wait = True
-                else:
-                    sleep_wait = False
-
+                        sleep_wait = True
+            
                 sleep_counter += 1
 
-            if error:
-                self.client.quit()
-                self.client = None
+            if sleep_wait:
+                success = False
+                error = "MFA was not approved! Stopping."
+                log(error, level=0)
 
-            elif sleep_wait:
-                log("MFA was not approved! Stopping.", level=0)
+        if not success:
+            self.client.quit()
+            self.client = None
+        else:
+            # stay signed in
+            self.client.find_element_by_xpath("//input[@type='submit']").click()
+            sleep(CONST_SLEEP_TIME)
 
-                self.client.quit()
-                self.client = None
-        
-        # stay signed in
-        self.client.find_element_by_xpath("//input[@type='submit']").click()
-        sleep(CONST_SLEEP_TIME)
 
     def get_courses(self):
         """
         Loads courses page
 
+        Returns:
+            success - flag if the action was succesful
+            error - error message
+            entries - a list of courses
         """
+
+        success = True
+        error = None
 
         log("Getting the list of courses", level=1)
 
         log("Loading %s" % (CONST_PORTAL_COURSES_ADDRESS), level=2, indent=2)
         self.client.get(CONST_PORTAL_COURSES_ADDRESS)
 
-        # Finds table entries
-        sleep_counter = 0
         sleep_wait = True
+        time_start = time()
 
-        while sleep_wait and sleep_counter < CONST_MAX_REFRESH_COUNT:
+        # Finds table entries
+        while sleep_wait:
+
+            time_elapsed = time() - time_start
+            
+            if time_elapsed > CONST_TIMEOUT:
+                success = False
+                error = "ERROR: Time out (%d)" % (CONST_TIMEOUT)
+                log(error, level=0)
+                break
 
             log(
                 "Sleeping while courses are loading (%f).."
@@ -179,18 +202,25 @@ class Crawler:
             if len(entries) != 0:
                 sleep_wait = False
                 log("List of courses loaded!", level=2, indent=2)
+                log("Found %d courses." % (len(entries)), level=1, indent=2)
 
-        log("Found %d courses." % (len(entries)), level=1, indent=2)
+        return success, error, entries
 
-        return entries
 
     def get_courses_df(self):
         """
         Gets the list of courses as pandas dataframe.
 
+        Returns:
+            success - flag if the action was succesful
+            error - error message
+            courses_df - courses dataframe
         """
 
-        entries = self.get_courses()
+        success, error, entries = self.get_courses()
+
+        if not success:
+            return success, error, None
 
         data = []
 
@@ -237,7 +267,8 @@ class Crawler:
             ],
         )
 
-        return courses_df
+        return success, error, courses_df
+
 
     def get_course_details_df(self, course_name, lab_name=None, handout_name=None):
         """
@@ -248,26 +279,29 @@ class Crawler:
             lab_name: name of a lab (optional)
             handout_name: name of a handout (optional)
         Returns:
+            success - flag if the action was succesful
+            error - error message
             details_df: pandas dataframe containing all the course's handouts and their details
-            error: error message if an error was encountered
         """
 
         details_df = None
-
-        error = None
-        found = False
+        
         log("Looking for %s course details" % (course_name), level=1)
 
         ############################################################################
         # first navigate to the courses page and wait till it loads
         ############################################################################
 
-        entries = self.get_courses()
+        success, error, entries = self.get_courses()
+
+        if not success:
+            return success, error, details_df
 
         ############################################################################
         # select the course
         ############################################################################
 
+        found = False
         for entry in entries:
             elements = entry.find_elements_by_class_name("azc-grid-cellContent")
 
@@ -277,9 +311,11 @@ class Crawler:
                 break
 
         if not found:
+            success = False
             error = "Could not find (%s) course. Returning." % (course_name)
             log(error, level=0)
-            return None, error
+
+            return success, error, details_df
 
         ############################################################################
         # wait until the course overview page is loaded
@@ -289,11 +325,18 @@ class Crawler:
 
         log("Loading (%s) course " % (course_name), level=1)
 
-        sleep_counter = 0
         found = False
         course_title = None
 
-        while not found and sleep_counter < CONST_MAX_REFRESH_COUNT:
+        timeout = False
+        time_start = time()
+
+        while not found:
+
+            time_elapsed = time() - time_start
+            if time_elapsed > CONST_TIMEOUT:
+                timeout = True
+                break
 
             log(
                 "Sleeping while the (%s) course overview is loading (%f).."
@@ -312,18 +355,27 @@ class Crawler:
                 found = True
                 course_title = course_title_list[0].text
 
+        if timeout:
+            success = False
+            error = "ERROR: Time out (%d)" % (CONST_TIMEOUT)
+            log(error, level=0)
+            return success, error, details_df
+
         if not found:
+            success = False
             error = "Could not load (%s) course. Returning." % (course_name)
             log(error, level=0, indent=2)
-            return None, error
+            return success, error, details_df
 
         if course_title != course_name:
+            success = False
             error = (
                 "The loaded course's title (%s) doesn't match the given name (%s)."
                 % (course_title, course_name)
             )
             log(error, level=0, indent=2)
-            return None, error
+
+            return success, error, details_df
 
         ############################################################################
         # finding all the labs that belong to the course and getting their details
@@ -357,9 +409,9 @@ class Crawler:
             # give some time to load
             sleep(CONST_SLEEP_TIME)
 
-            handouts_df, error = self.get_lab_details(course_name, el_lab_name, handout_name)
+            success, error, handouts_df = self.get_lab_details(course_name, el_lab_name, handout_name)
 
-            if error is not None:
+            if not success:
                 break
 
             if details_df is None:
@@ -370,11 +422,9 @@ class Crawler:
             # if we found the lab, do not need to continue
             if lab_name is not None and lab_name == el_lab_name:
                 break
+        
+        return success, error, details_df
 
-        if error is None:
-            return details_df, error
-
-        return None, error
 
     def get_lab_details(self, course_name, lab_name, handout_name=None):
         """
@@ -385,19 +435,28 @@ class Crawler:
             lab_name: the name of the lab
             handout_name: name of a handout (optional)
         Returns:
+            success - flag if the action was succesful
+            error - error message
             handouts_df: pandas dataframe
         """
 
-        log(
-            "Loading (%s) course -> (%s) lab -> more blade." % (course_name, lab_name),
-            level=1,
-        )
+        success = True
+        error = None
 
-        sleep_counter = 0
+        log("Loading (%s) course -> (%s) lab -> more blade." % (course_name, lab_name), level=1)
+
         found = False
         more_buttom = None
 
-        while not found and sleep_counter < CONST_MAX_REFRESH_COUNT:
+        time_start = time()
+        timeout = False
+
+        while not found:
+            
+            time_elapsed = time() - time_start
+            if time_elapsed > CONST_TIMEOUT:
+                timeout = True
+                break
 
             log(
                 "Sleeping while the initial handout list is loading (%f).."
@@ -405,6 +464,7 @@ class Crawler:
                 level=3,
                 indent=2,
             )
+
             sleep(CONST_REFRESH_SLEEP_TIME)
 
             try:
@@ -415,14 +475,20 @@ class Crawler:
             except:
                 found = False
 
+        if timeout:
+            success = False
+            error = "ERROR: Time out (%d)" % (CONST_TIMEOUT)
+            log(error, level=0)
+            return success, error, None
+
         if not found:
+            success = False
             error = (
                 "Could not find 'more' button in the (%s) course -> (%s) lab blade. Returning."
                 % (course_name, lab_name)
             )
             log(error, level=0, indent=2)
-            return None, error
-
+            return success, error, None
 
         more_buttom.click()
 
@@ -436,9 +502,10 @@ class Crawler:
             level=1,
         )
 
-        handouts_df, error = self.get_handouts_details(course_name, lab_name, handout_name)
+        success, error, handouts_df = self.get_handouts_details(course_name, lab_name, handout_name)
 
-        return handouts_df, error
+        return success, error, handouts_df
+
 
     def get_handouts_details(self, course_name, lab_name, handout_name=None):
         """
@@ -450,20 +517,30 @@ class Crawler:
             lab_name: the name of the lab
             handout_name: name of a handout (optional)
         Returns:
+            success - flag if the action was succesful
+            error - error message
             handouts_df: pandas dataframe
         """
 
+        success = True
+        error = None
+        handouts_df = None
+
         data = []
 
-        handouts_df = None
-        error = None
-
-        sleep_counter = 0
         found = False
         handout_list_table = None
 
+        time_start = time()
+        timeout = False
+
         # wait until handout list table is loading
-        while not found and sleep_counter < CONST_MAX_REFRESH_COUNT:
+        while not found:
+            
+            time_elapsed = time() - time_start
+            if time_elapsed > CONST_TIMEOUT:
+                timeout = True
+                break
 
             log(
                 "Sleeping while the (%s) course -> (%s) lab -> more blade: handout list table is loading (%.2f).."
@@ -482,16 +559,21 @@ class Crawler:
             except:
                 found = False
 
-            sleep_counter += 1
+        if timeout:
+            success = False
+            error = "ERROR: Time out (%d)" % (CONST_TIMEOUT)
+            log(error, level=0)
+            return success, error, handouts_df
 
         if not found:
+            success = False
             error = (
                 "Could not load the (%s) course -> (%s) lab -> more blade: handout list table."
                 % (course_name, lab_name)
             )
             log(error, level=0, indent=4)
 
-            return handouts_df, error
+            return success, error, handouts_df
 
         # Checks if the correct lab is loaded
         blade_titles = self.client.find_elements_by_class_name(
@@ -500,19 +582,27 @@ class Crawler:
         blade_titles_cnt = len(blade_titles)
 
         if blade_titles_cnt != 4:
+            success = False
             error = (
                 "Expected to be in the (%s) course -> (%s) lab -> more blade (depth = 4). Current depth = %d."
                 % (course_name, lab_name, blade_titles_cnt)
             )
-
             log(error, level=0, indent=4)
 
-            return handouts_df, error
+            return success, error, handouts_df
 
-        sleep_counter = 0
         consumption_loaded = False
 
-        while not consumption_loaded and sleep_counter < CONST_MAX_REFRESH_COUNT:
+        time_start = time()
+        timeout = False
+
+        while not consumption_loaded:
+            
+            time_elapsed = time() - time_start
+            if time_elapsed > CONST_TIMEOUT:
+                timeout = True
+                break
+
             consumption_loaded = True
 
             log(
@@ -560,7 +650,8 @@ class Crawler:
                 el_handout_link.click()
 
                 (
-                    sub_details_loaded,
+                    success,
+                    error,
                     sub_name,
                     sub_id,
                     sub_status,
@@ -569,7 +660,7 @@ class Crawler:
                     crawltime_utc,
                 ) = self.get_handout_details(el_handout_name)
 
-                if sub_details_loaded:
+                if success:
                     data.append(
                         [
                             course_name,
@@ -599,10 +690,17 @@ class Crawler:
                 if handout_name is not None and handout_name == el_handout_name:
                     break
 
-            if error is not None:
+            if not success:
                 break
 
-            sleep_counter += 1
+        if timeout:
+            success = False
+            error = "ERROR: Time out (%d)" % (CONST_TIMEOUT)
+            log(error, level=0)
+            return success, error, handouts_df
+
+        if not success:
+            return success, error, handouts_df
 
         handouts_df = pd.DataFrame(
             data,
@@ -628,7 +726,8 @@ class Crawler:
             level=1,
         )
 
-        return handouts_df, error
+        return success, error, handouts_df
+
 
     def get_handout_details(self, handout_name):
         """
@@ -640,11 +739,14 @@ class Crawler:
             handout_name: handout name
 
         Returns:
-            sub_details_loaded: a flag indicating if subscription details were read successfully
+            success - a flag indicating if subscription details were read successfully
+            error - error message
             sub_name, sub_id, sub_status, sub_expiry_date, sub_user_email_list
         """
 
-        sub_sleep_counter = 0
+        success = True
+        error = None
+
         sub_details_loaded = False
         sub_name = None
         sub_id = None
@@ -652,7 +754,15 @@ class Crawler:
         sub_expiry_date = None
         sub_user_email_list = []
 
-        while not sub_details_loaded and sub_sleep_counter < CONST_MAX_REFRESH_COUNT:
+        time_start = time()
+        timeout = False
+
+        while not sub_details_loaded:
+
+            time_elapsed = time() - time_start
+            if time_elapsed > CONST_TIMEOUT:
+                timeout = True
+                break
 
             log(
                 "Sleeping while handout (%s) details are loading (%f).."
@@ -704,19 +814,22 @@ class Crawler:
             except:
                sub_details_loaded = False
 
-            sub_sleep_counter += 1
+        if timeout:
+            success = False
+            error = "ERROR: Time out (%d)" % (CONST_TIMEOUT)
+            log(error, level=0)
 
         if sub_details_loaded:
             log("(%s) handout details read." % (handout_name), level=1, indent=2)
+
         else:
-            log(
-                "Could not read (%s) handout details" % (handout_name),
-                level=1,
-                indent=2,
-            )
+            success = False
+            error = "Could not read (%s) handout details" % (handout_name)
+            log(error, level=1, indent=2)
 
         return (
-            sub_details_loaded,
+            success, 
+            error,
             sub_name,
             sub_id,
             sub_status,
@@ -724,6 +837,7 @@ class Crawler:
             sub_user_email_list,
             crawl_time_utc_dt,
         )
+
 
     def get_eduhub_details(self, course_name=None):
         """
@@ -733,17 +847,25 @@ class Crawler:
         Arguments:
             course_name - name of a course
 
+        Returns:
+            success - flag if the action was succesful
+            error - error message
+            eduhub_df - aggregated details
         """
 
         eduhub_df = None
 
-        courses_df = self.get_courses_df()
+        success, error, courses_df = self.get_courses_df()
+
+        if not success:
+            return success, error, eduhub_df
 
         for _, course in courses_df.iterrows():
             
-            course_df, error = self.get_course_details_df(course["Name"])
+            self.client.refresh()
+            success, error, course_df = self.get_course_details_df(course["Name"])
 
-            if error is not None:
+            if not success:
                 break
 
             if eduhub_df is None:
@@ -751,10 +873,8 @@ class Crawler:
             else:
                 eduhub_df = eduhub_df.append(course_df)
 
-        if error is None:
-            return eduhub_df, error
+        return success, error, eduhub_df
 
-        return None, error
 
     def quit(self):
         """
@@ -776,19 +896,23 @@ def crawl(args):
     Arguments:
         args: command line arguments
     Returns:
-
+        success - flag if the action was succesful
+        error - error message
+        return_result - if output is df - resulting dataframe
     """
 
+    success = True
+    error = None
     return_result = None
 
     # check if any action is specified
-    if (hasattr(args, "courses_action") or hasattr(args, "handout_action")):
-        status = True
-    else:
-        status = False
-        log("Unrecognised/unspecified action. Skipping.", level=0)
+    if not (hasattr(args, "courses_action") or hasattr(args, "handout_action")):
 
-    if status:
+        success = False
+        error = "Unrecognised/unspecified action. Skipping."
+        log(error, level=0)
+
+    if success:
         log("Crawler started", level=1)
 
         os.environ["WDM_LOG_LEVEL"] = "%d" % CONST_VERBOSE_LEVEL
@@ -807,12 +931,11 @@ def crawl(args):
             or len(login_password) == 0
         ):
 
-            message = "Missing login credentials. Have you set the environmental parameters? Exiting."
-            log(message, level=0)
+            success = False
+            error = "Missing login credentials. Have you set the environmental parameters? Exiting."
+            log(error, level=0)      
 
-            status = False
-
-    if status:
+    if success:
         result = None
 
         try:
@@ -833,11 +956,15 @@ def crawl(args):
 
         # take the specified action
         if crawler.client is not None:
-            result = _take_action(args, crawler)
+            success, error, result = _take_action(args, crawler)
+        else:
+            success = False
+            error = "Client not established"
+            result = None
 
         crawler.quit()
 
-        if result is not None:
+        if success and result is not None:
             if args.output != CONST_OUTPUT_DF:
                 _output_result(args.output, result)
             else:
@@ -845,7 +972,7 @@ def crawl(args):
 
     log("Crawler finished", level=1)
 
-    return status, return_result
+    return success, error, return_result
 
 
 def _take_action(args, crawler):
@@ -861,7 +988,7 @@ def _take_action(args, crawler):
 
     if hasattr(args, "courses_action"):
         if args.courses_action == CONST_ACTION_LIST:
-            results_df = crawler.get_courses_df()
+            success, error, results_df = crawler.get_courses_df()
         else:
             log("Unrecognised subaction. Skipping.", level=0)
 
@@ -885,10 +1012,10 @@ def _take_action(args, crawler):
         if args.handout_action == CONST_ACTION_LIST:
             # all courses
             if course_name is None:
-                results_df, _ = crawler.get_eduhub_details()
+                success, error, results_df = crawler.get_eduhub_details()
             # specific course (optionally, specific lab, handout)
             else:
-                results_df, _ = crawler.get_course_details_df(
+                success, error, results_df = crawler.get_course_details_df(
                     course_name, lab_name, handout_name
                 )
 
@@ -898,7 +1025,7 @@ def _take_action(args, crawler):
     else:
         log("Unrecognised/unspecified action. Skipping.", level=0)
 
-    return results_df
+    return success, error, results_df
 
 
 def _output_result(output, result):
@@ -908,23 +1035,32 @@ def _output_result(output, result):
     Argument:
         output: command line argument for output
         result: result object of the previously taken action
-
+    Returns:
+        success - flag if the action was succesful
+        error - error message
     """
 
+    success = True
+    error = None
+
     if not isinstance(result, pd.DataFrame):
-        log("Expecting result as pandas dataframe. Got %s" % (type(result)), level=0)
-        return
+        success = False
+        error = "Expecting result as pandas dataframe. Got %s" % (type(result))
+        log(error, level=0)
+        return success, error
 
     if output == CONST_OUTPUT_TABLE:
         print(tabulate(result, headers="keys", tablefmt="psql", showindex=False))
 
     elif output == CONST_OUTPUT_CSV:
-
         result.to_csv("%s.csv" % CONST_DEFAULT_OUTPUT_FILE_NAME)
 
     elif output == CONST_OUTPUT_JSON:
-
         result.to_json("%s.json" % CONST_DEFAULT_OUTPUT_FILE_NAME, orient="records")
 
     else:
-        log("Unrecognised type of output. Skipping.", level=0)
+        success = False
+        error = "Unrecognised type of output. Skipping."
+        log(error, level=0)
+
+    return success, error

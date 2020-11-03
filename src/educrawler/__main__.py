@@ -95,7 +95,7 @@ def main():
     args = set_command_line_args(default_output)
 
     # run the crawl
-    crawl(args)
+    _, _, _ = crawl(args)
 
 if __name__ == "__main__":
 
