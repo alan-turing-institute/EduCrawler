@@ -5,14 +5,16 @@ Constants module.
 import os
 
 CONST_PORTAL_ADDRESS = "https://portal.azure.com/"
-CONST_PORTAL_OVERVIEW_ADDRESS = "https://portal.azure.com/#blade/Microsoft_Azure_Education/EducationMenuBlade/overview"
-CONST_PORTAL_COURSES_ADDRESS = "https://portal.azure.com/#blade/Microsoft_Azure_Education/EducationMenuBlade/classrooms"
+CONST_PORTAL_OVERVIEW_ADDRESS = "https://portal.azure.com" + \
+    "/#blade/Microsoft_Azure_Education/EducationMenuBlade/overview"
+CONST_PORTAL_COURSES_ADDRESS = "https://portal.azure.com" + \
+    "/#blade/Microsoft_Azure_Education/EducationMenuBlade/classrooms"
 
 CONST_WEBDRIVER_HEADLESS = True
 
 try:
     CONST_VERBOSE_LEVEL = int(os.environ["EC_VERBOSE_LEVEL"])
-except:
+except KeyError:
     CONST_VERBOSE_LEVEL = 2
 
 CONST_REFRESH_SLEEP_TIME = 0.05

@@ -9,7 +9,7 @@ Created and designed by <a href="https://github.com/tomaslaz">Tomas Lazauskas</a
 ## Installation
 
 ```bash
-pip install git+https://github.com/tomaslaz/EduCrawler.git
+pip install git+https://github.com/alan-turing-institute/EduCrawler.git
 ```
 
 ## Setup
@@ -109,7 +109,7 @@ ec handout list --course-name "Research Engineering" --lab-name "project" --hand
 ```
 
 ## Getting help
-If you found a bug or need support, please submit an issue [here](https://github.com/tomaslaz/EduCrawler/issues/new).
+If you found a bug or need support, please submit an issue [here](https://github.com/alan-turing-institute/EduCrawler/issues/new).
 
 ## How to contribute
-We welcome contributions! If you are willing to propose new features or have bug fixes to contribute, please submit a pull request [here](https://github.com/tomaslaz/EduCrawler/pulls).
+We welcome contributions! If you are willing to propose new features or have bug fixes to contribute, please submit a pull request [here](https://github.com/alan-turing-institute/EduCrawler/pulls).

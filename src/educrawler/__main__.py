@@ -1,5 +1,6 @@
 """
-Command line tools package for crawling the Education section of portal.azure.com.
+Command line tools package for crawling the Education section of
+    portal.azure.com.
 
 Tomas Lazauskas
 """
@@ -15,6 +16,7 @@ from educrawler.constants import (
     CONST_OUTPUT_TABLE,
 )
 
+
 def set_command_line_args(default_output):
     """
     Sets up command line arguments.
@@ -28,8 +30,8 @@ def set_command_line_args(default_output):
 
     # Command line arguments
     parser = argparse.ArgumentParser(
-        description="A command line experience for interacting with " + \
-            "the Education section of portal.azure.com."
+        description="A command line experience for interacting with "
+        + "the Education section of portal.azure.com."
     )
 
     parser.add_argument(
@@ -64,15 +66,18 @@ def set_command_line_args(default_output):
     )
 
     parser_h.add_argument(
-        "--course-name", help="Name of course.",
+        "--course-name",
+        help="Name of course.",
     )
 
     parser_h.add_argument(
-        "--lab-name", help="Name of lab.",
+        "--lab-name",
+        help="Name of lab.",
     )
 
     parser_h.add_argument(
-        "--handout-name", help="Name of handout.",
+        "--handout-name",
+        help="Name of handout.",
     )
 
     args, _ = parser.parse_known_args()
@@ -96,6 +101,7 @@ def main():
 
     # run the crawl
     _, _, _ = crawl(args)
+
 
 if __name__ == "__main__":
 

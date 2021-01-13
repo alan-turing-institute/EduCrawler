@@ -1,7 +1,6 @@
 """
 Utilities module.
 """
-import os
 
 from datetime import datetime, timezone
 
@@ -23,7 +22,8 @@ def log(message, level=3, indent=0):
     """
 
     if level <= CONST_VERBOSE_LEVEL:
-        utc_timestamp = datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()
+        utc_timestamp = datetime.utcnow() \
+            .replace(tzinfo=timezone.utc).isoformat()
 
         indent_str = ""
         for _ in range(indent):
