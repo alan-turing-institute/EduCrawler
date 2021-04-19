@@ -3,7 +3,7 @@ EduHub portal crawling module.
 """
 
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep, time
 import pandas as pd
 from tabulate import tabulate
@@ -24,6 +24,9 @@ from educrawler.constants import (
     CONST_PORTAL_COURSES_ADDRESS,
     CONST_VERBOSE_LEVEL,
     CONST_ACTION_LIST,
+    CONST_USAGE_ACTION,
+    CONST_USAGE_PATH,
+    CONST_USAGE_CSV_FILE_NAME,
     CONST_OUTPUT_TABLE,
     CONST_OUTPUT_CSV,
     CONST_OUTPUT_JSON,
@@ -56,6 +59,15 @@ class Crawler:
         success = True
         error = None
 
+        usage_file_path = os.path.join(CONST_USAGE_PATH, CONST_USAGE_CSV_FILE_NAME)
+
+        if os.path.isfile(usage_file_path):
+            os.rename(usage_file_path, 
+                "%s_backup_%s"% (
+                    usage_file_path, 
+                    datetime.now().strftime("%Y%m%d_%H%M%S")
+                ))
+
         options = Options()
 
         if hide:
@@ -64,10 +76,15 @@ class Crawler:
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--log-level=0")
 
+        options.add_experimental_option("prefs", {
+            "download.default_directory": r"%s" % (CONST_USAGE_PATH),
+            "download.prompt_for_download": False,
+            "download.directory_upgrade": True,
+            "safebrowsing.enabled": True
+            })
+
         self.client = webdriver.Chrome(ChromeDriverManager().install(),
                                        options=options)
-
-        # self.client.implicitly_wait(30)
 
         log("Logging to %s as %s" % (CONST_PORTAL_ADDRESS, login_email),
             level=1)
@@ -899,6 +916,131 @@ class Crawler:
 
         return success, error, eduhub_df
 
+    def download_usage(self, start_dt=None, end_dt=None):
+        """
+        Downloads usage data
+
+        """
+
+        if end_dt is None:
+            end_dt = datetime.now()
+        
+        if start_dt is None:
+            start_dt = end_dt - timedelta(days=10)
+
+        success = True
+        error = None
+        
+        # Opening courses page
+        success, error, _ = self.get_courses()
+
+        if not success:
+            return success, error
+
+        # Clicking the Usage button
+        sleep(CONST_REFRESH_SLEEP_TIME)
+
+        elements = self.client.find_elements_by_class_name(
+            "azc-toolbarButton-label"
+        )
+
+        found = False
+        for _, element in enumerate(elements):
+            if element.text == "Usage":
+                found = True
+                break
+
+        if not found:
+            success = False
+            error = "Could not find 'Usage' button"
+            log(error, level=0, indent=2)
+            return success, error
+
+        element.click()
+
+        sleep(CONST_SLEEP_TIME)
+
+        # Changing the start date
+        start_el = self.client.find_element_by_class_name(
+            "azc-dateTimePicker-startDateTime"
+        )
+
+        end_el = self.client.find_element_by_class_name(
+            "azc-dateTimePicker-endDateTime"
+        )
+
+        if start_el is None or end_el is None:
+            success = False
+            error = "Could not find 'Start' and 'End' input fields"
+            log(error, level=0, indent=2)
+            return success, error
+
+        start_el_dt = start_el.find_element_by_class_name(
+            "azc-datePicker"
+        ).find_element_by_class_name("azc-input")
+
+        start_el_tm = start_el.find_element_by_class_name(
+            "azc-timePicker"
+        ).find_element_by_class_name("azc-input")
+
+        start_el_dt.clear()
+        start_el_dt.send_keys(start_dt.strftime("%Y-%m-%d"))
+
+        sleep(CONST_SLEEP_TIME)
+
+        start_el_tm.clear()
+        start_el_tm.send_keys(start_dt.strftime("%I:%M:%S %p"))
+
+        sleep(CONST_SLEEP_TIME)
+
+        start_el_tm.clear()
+        start_el_tm.send_keys(start_dt.strftime("%I:%M:%S %p"))
+
+        end_el_dt = end_el.find_element_by_class_name(
+            "azc-datePicker"
+        ).find_element_by_class_name("azc-input")
+
+        end_el_tm = end_el.find_element_by_class_name(
+            "azc-timePicker"
+        ).find_element_by_class_name("azc-input")
+
+        end_el_dt.clear()
+        end_el_dt.send_keys(end_dt.strftime("%Y-%m-%d"))
+
+        sleep(CONST_SLEEP_TIME)
+
+        end_el_tm.clear()
+        end_el_tm.send_keys(end_dt.strftime("%I:%M:%S %p"))
+
+        sleep(CONST_SLEEP_TIME)
+
+        end_el_tm.clear()
+        end_el_tm.send_keys(end_dt.strftime("%I:%M:%S %p"))
+
+        sleep(CONST_SLEEP_TIME)
+
+        element = self.client.find_element_by_class_name(
+            "fxc-fileDownloadButton"
+        )
+        
+        element.click()
+
+        # wait for the file to be downloaded
+        sleep(60)
+
+        # check if file exists
+
+        usage_file_path = os.path.join(CONST_USAGE_PATH, CONST_USAGE_CSV_FILE_NAME)
+
+        if not os.path.isfile(usage_file_path):
+            success = False
+            error = "Could not download usage data for %s - %s" % (
+                start_dt, end_dt
+            )
+            log(error, level=0, indent=2)
+
+        return success, error
+
     def quit(self):
         """
         Nicely turns off the crawler.
@@ -931,7 +1073,8 @@ def crawl(args):
     # check if any action is specified
     if (not (
             hasattr(args, "courses_action") or
-            hasattr(args, "handout_action"))):
+            hasattr(args, "handout_action") or
+            hasattr(args, "usage_action"))):
 
         success = False
         error = "Unrecognised/unspecified action. Skipping."
@@ -1050,6 +1193,9 @@ def _take_action(args, crawler):
         else:
             log("Unrecognised subaction. Skipping.", level=0)
 
+    elif hasattr(args, CONST_USAGE_ACTION):
+        success, error = crawler.download_usage()
+   
     else:
         log("Unrecognised/unspecified action. Skipping.", level=0)
 

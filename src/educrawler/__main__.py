@@ -13,6 +13,7 @@ from educrawler.crawler import crawl
 from educrawler.constants import (
     CONST_OUTPUT_LIST,
     CONST_ACTION_LIST,
+    CONST_USAGE_ACTION,
     CONST_OUTPUT_TABLE,
 )
 
@@ -44,7 +45,6 @@ def set_command_line_args(default_output):
     subparser = parser.add_subparsers()
 
     # courses
-
     parser_c = subparser.add_parser("course")
     parser_c.add_argument(
         "courses_action",
@@ -55,7 +55,6 @@ def set_command_line_args(default_output):
     )
 
     # handouts
-
     parser_h = subparser.add_parser("handout")
     parser_h.add_argument(
         "handout_action",
@@ -78,6 +77,16 @@ def set_command_line_args(default_output):
     parser_h.add_argument(
         "--handout-name",
         help="Name of handout.",
+    )
+
+    # usage
+    parser_u = subparser.add_parser("usage")
+    parser_u.add_argument(
+        CONST_USAGE_ACTION,
+        default=CONST_USAGE_ACTION,
+        const=CONST_USAGE_ACTION,
+        nargs="?",
+        choices=[CONST_USAGE_ACTION],
     )
 
     args, _ = parser.parse_known_args()
