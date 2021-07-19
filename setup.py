@@ -95,6 +95,7 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3 :: Only",
         "Environment :: Console",
         "Operating System :: MacOS",
@@ -132,11 +133,11 @@ setup(
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
-        "selenium>=3.141.0",
-        "webdriver-manager>=3.2.2",
-        "pandas>=0.25.3",
-        "tabulate>=0.8.7",
-        "pyyaml>=5.1.1",
+        "selenium==3.141.0",
+        "webdriver-manager==3.4.2",
+        "pandas==1.3.0",
+        "tabulate==0.8.9",
+        "pyyaml==5.4.1",
     ],  # Optional
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"
