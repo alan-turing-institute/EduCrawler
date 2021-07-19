@@ -60,14 +60,16 @@ class Crawler:
         success = True
         error = None
 
-        usage_file_path = os.path.join(CONST_USAGE_PATH, CONST_USAGE_CSV_FILE_NAME)
+        usage_file_path = os.path.join(
+            CONST_USAGE_PATH, CONST_USAGE_CSV_FILE_NAME
+        )
 
         if os.path.isfile(usage_file_path):
-            os.rename(usage_file_path, 
-                "%s_backup_%s"% (
-                    usage_file_path, 
-                    datetime.now().strftime("%Y%m%d_%H%M%S")
-                ))
+            os.rename(
+                usage_file_path,
+                "%s_backup_%s"
+                % (usage_file_path, datetime.now().strftime("%Y%m%d_%H%M%S")),
+            )
 
         options = Options()
 
@@ -77,18 +79,24 @@ class Crawler:
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--log-level=0")
 
-        options.add_experimental_option("prefs", {
-            "download.default_directory": r"%s" % (CONST_USAGE_PATH),
-            "download.prompt_for_download": False,
-            "download.directory_upgrade": True,
-            "safebrowsing.enabled": True
-            })
+        options.add_experimental_option(
+            "prefs",
+            {
+                "download.default_directory": r"%s" % (CONST_USAGE_PATH),
+                "download.prompt_for_download": False,
+                "download.directory_upgrade": True,
+                "safebrowsing.enabled": True,
+            },
+        )
 
-        self.client = webdriver.Chrome(ChromeDriverManager().install(),
-                                       options=options)
+        self.client = webdriver.Chrome(
+            ChromeDriverManager().install(), options=options
+        )
 
-        log("Logging to %s as %s" % (CONST_PORTAL_ADDRESS, login_email),
-            level=1)
+        log(
+            "Logging to %s as %s" % (CONST_PORTAL_ADDRESS, login_email),
+            level=1,
+        )
 
         self.client.get(CONST_PORTAL_ADDRESS)
 
@@ -114,10 +122,12 @@ class Crawler:
         if success:
             # entering password
             self.client.find_element_by_xpath(
-                "//input[@name='passwd']").send_keys(login_pass)
+                "//input[@name='passwd']"
+            ).send_keys(login_pass)
 
             self.client.find_element_by_xpath(
-                "//input[@type='submit']").click()
+                "//input[@type='submit']"
+            ).click()
 
             sleep(CONST_SLEEP_TIME)
 
@@ -139,8 +149,11 @@ class Crawler:
             sleep_wait = True
 
             while sleep_wait and sleep_counter < CONST_MAX_REFRESH_COUNT:
-                log("Sleeping (%f).." %
-                    (CONST_REFRESH_SLEEP_TIME), level=3, indent=2)
+                log(
+                    "Sleeping (%f).." % (CONST_REFRESH_SLEEP_TIME),
+                    level=3,
+                    indent=2,
+                )
                 sleep(CONST_REFRESH_SLEEP_TIME)
 
                 # wait for MFA approval if needed
@@ -149,7 +162,8 @@ class Crawler:
                 except Exception:
                     try:
                         self.client.find_element_by_xpath(
-                            "//input[@type='submit']")
+                            "//input[@type='submit']"
+                        )
 
                         log("MFA approved!", level=1)
                         sleep_wait = False
@@ -169,7 +183,8 @@ class Crawler:
         else:
             # stay signed in
             self.client.find_element_by_xpath(
-                "//input[@type='submit']").click()
+                "//input[@type='submit']"
+            ).click()
 
             sleep(CONST_SLEEP_TIME)
 
@@ -243,7 +258,8 @@ class Crawler:
 
         for entry in entries:
             elements = entry.find_elements_by_class_name(
-                "azc-grid-cellContent")
+                "azc-grid-cellContent"
+            )
 
             course_name = None
             course_budget = None
@@ -287,8 +303,9 @@ class Crawler:
 
         return success, error, courses_df
 
-    def get_course_details_df(self, course_name,
-                              lab_name=None, handout_name=None):
+    def get_course_details_df(
+        self, course_name, lab_name=None, handout_name=None
+    ):
         """
         Gets the list of handouts in a course and their details.
 
@@ -325,7 +342,8 @@ class Crawler:
         found = False
         for entry in entries:
             elements = entry.find_elements_by_class_name(
-                "azc-grid-cellContent")
+                "azc-grid-cellContent"
+            )
 
             if elements[0].text == course_name:
                 log("(%s) course found." % (course_name), level=1)
@@ -391,10 +409,9 @@ class Crawler:
 
         if course_title != course_name:
             success = False
-            error = (
-                "The loaded course's title (%s) " % (course_title) +
-                "doesn't match the given name (%s)." % (course_name)
-            )
+            error = "The loaded course's title (%s) " % (
+                course_title
+            ) + "doesn't match the given name (%s)." % (course_name)
             log(error, level=0, indent=2)
 
             return success, error, details_df
@@ -411,10 +428,12 @@ class Crawler:
         )
 
         entries = classroom_grid.find_elements_by_class_name(
-            "ext-grid-clickable-link")
+            "ext-grid-clickable-link"
+        )
 
-        log("(%s) course has %d lab(s)." %
-            (course_name, len(entries)), level=1)
+        log(
+            "(%s) course has %d lab(s)." % (course_name, len(entries)), level=1
+        )
 
         for element in entries:
 
@@ -425,8 +444,8 @@ class Crawler:
                 continue
 
             log(
-                "Loading (%s) course -> (%s) lab blade." %
-                (course_name, el_lab_name),
+                "Loading (%s) course -> (%s) lab blade."
+                % (course_name, el_lab_name),
                 level=1,
             )
 
@@ -471,8 +490,8 @@ class Crawler:
         error = None
 
         log(
-            "Loading (%s) course -> (%s) lab -> more blade." %
-            (course_name, lab_name),
+            "Loading (%s) course -> (%s) lab -> more blade."
+            % (course_name, lab_name),
             level=1,
         )
 
@@ -513,10 +532,9 @@ class Crawler:
 
         if not found:
             success = False
-            error = (
-                "Could not find 'more' button in the (%s) " % (course_name) +
-                "course -> (%s) lab blade. Returning." % (lab_name)
-            )
+            error = "Could not find 'more' button in the (%s) " % (
+                course_name
+            ) + "course -> (%s) lab blade. Returning." % (lab_name)
             log(error, level=0, indent=2)
             return success, error, None
 
@@ -574,9 +592,9 @@ class Crawler:
                 break
 
             log(
-                "Sleeping while the (%s) course -> " % (course_name) +
-                "(%s) lab -> more blade: handout list " % (lab_name) +
-                "table is loading (%.2f).." % (CONST_REFRESH_SLEEP_TIME),
+                "Sleeping while the (%s) course -> " % (course_name)
+                + "(%s) lab -> more blade: handout list " % (lab_name)
+                + "table is loading (%.2f).." % (CONST_REFRESH_SLEEP_TIME),
                 level=3,
                 indent=4,
             )
@@ -599,10 +617,9 @@ class Crawler:
 
         if not found:
             success = False
-            error = (
-                "Could not load the (%s) course -> " % (course_name) +
-                "(%s) lab -> more blade: handout list table." % (lab_name)
-            )
+            error = "Could not load the (%s) course -> " % (
+                course_name
+            ) + "(%s) lab -> more blade: handout list table." % (lab_name)
             log(error, level=0, indent=4)
 
             return success, error, handouts_df
@@ -616,9 +633,9 @@ class Crawler:
         if blade_titles_cnt != 4:
             success = False
             error = (
-                "Expected to be in the (%s) course -> " % (course_name) +
-                "(%s) lab -> more blade (depth = 4). " % (lab_name) +
-                "Current depth = %d." % (blade_titles_cnt)
+                "Expected to be in the (%s) course -> " % (course_name)
+                + "(%s) lab -> more blade (depth = 4). " % (lab_name)
+                + "Current depth = %d." % (blade_titles_cnt)
             )
             log(error, level=0, indent=4)
 
@@ -639,10 +656,10 @@ class Crawler:
             consumption_loaded = True
 
             log(
-                "Sleeping while the (%s) course -> " % (course_name) +
-                "(%s) lab -> more blade: handout list table is " % (lab_name) +
-                "loading consumption data " +
-                "(%.2f).." % (CONST_REFRESH_SLEEP_TIME),
+                "Sleeping while the (%s) course -> " % (course_name)
+                + "(%s) lab -> more blade: handout list table is " % (lab_name)
+                + "loading consumption data "
+                + "(%.2f).." % (CONST_REFRESH_SLEEP_TIME),
                 level=3,
                 indent=4,
             )
@@ -665,8 +682,9 @@ class Crawler:
                     # something wrong, incorrect number of cells
                     continue
 
-                el_handout_link = el_handout_details[0] \
-                    .find_element_by_class_name("ext-grid-clickable-link")
+                el_handout_link = el_handout_details[
+                    0
+                ].find_element_by_class_name("ext-grid-clickable-link")
 
                 el_handout_name = el_handout_link.text
                 el_handout_budget = el_handout_details[3].text.lower()
@@ -678,8 +696,9 @@ class Crawler:
                     break
 
                 # are we are looking for a particular handout?
-                if ((handout_name is not None) and
-                        (handout_name != el_handout_name)):
+                if (handout_name is not None) and (
+                    handout_name != el_handout_name
+                ):
 
                     continue
 
@@ -715,18 +734,20 @@ class Crawler:
                     )
                 else:
                     error = (
-                        "(%s) course -> " % (course_name) +
-                        "(%s) lab -> " % (lab_name) +
-                        "(%s) handout subscription " % (el_handout_name) +
-                        "details could not be read!"
+                        "(%s) course -> " % (course_name)
+                        + "(%s) lab -> " % (lab_name)
+                        + "(%s) handout subscription " % (el_handout_name)
+                        + "details could not be read!"
                     )
 
                     log(error, level=0, indent=4)
                     break
 
                 # if we found the handout, do not need to continue
-                if (handout_name is not None and
-                        handout_name == el_handout_name):
+                if (
+                    handout_name is not None
+                    and handout_name == el_handout_name
+                ):
                     break
 
             if not success:
@@ -760,8 +781,8 @@ class Crawler:
         )
 
         log(
-            "Finished getting the (%s) course " % (course_name) +
-            "-> (%s) lab -> more blade: handout details" % (lab_name),
+            "Finished getting the (%s) course " % (course_name)
+            + "-> (%s) lab -> more blade: handout details" % (lab_name),
             level=1,
         )
 
@@ -863,8 +884,11 @@ class Crawler:
             log(error, level=0)
 
         if sub_details_loaded:
-            log("(%s) handout details read." % (handout_name),
-                level=1, indent=2)
+            log(
+                "(%s) handout details read." % (handout_name),
+                level=1,
+                indent=2,
+            )
 
         else:
             success = False
@@ -906,8 +930,9 @@ class Crawler:
         for _, course in courses_df.iterrows():
 
             self.client.refresh()
-            success, error, course_df = \
-                self.get_course_details_df(course["Name"])
+            success, error, course_df = self.get_course_details_df(
+                course["Name"]
+            )
 
             if not success:
                 break
@@ -927,13 +952,13 @@ class Crawler:
 
         if end_dt is None:
             end_dt = datetime.now()
-        
+
         if start_dt is None:
             start_dt = end_dt - timedelta(days=10)
 
         success = True
         error = None
-        
+
         # Opening courses page
         success, error, _ = self.get_courses()
 
@@ -1025,7 +1050,7 @@ class Crawler:
         element = self.client.find_element_by_class_name(
             "fxc-fileDownloadButton"
         )
-        
+
         element.click()
 
         # wait for the file to be downloaded
@@ -1033,12 +1058,15 @@ class Crawler:
 
         # check if file exists
 
-        usage_file_path = os.path.join(CONST_USAGE_PATH, CONST_USAGE_CSV_FILE_NAME)
+        usage_file_path = os.path.join(
+            CONST_USAGE_PATH, CONST_USAGE_CSV_FILE_NAME
+        )
 
         if not os.path.isfile(usage_file_path):
             success = False
             error = "Could not download usage data for %s - %s" % (
-                start_dt, end_dt
+                start_dt,
+                end_dt,
             )
             log(error, level=0, indent=2)
 
@@ -1074,10 +1102,11 @@ def crawl(args):
     return_result = None
 
     # check if any action is specified
-    if (not (
-            hasattr(args, "courses_action") or
-            hasattr(args, "handout_action") or
-            hasattr(args, "usage_action"))):
+    if not (
+        hasattr(args, "courses_action")
+        or hasattr(args, "handout_action")
+        or hasattr(args, "usage_action")
+    ):
 
         success = False
         error = "Unrecognised/unspecified action. Skipping."
@@ -1103,8 +1132,10 @@ def crawl(args):
         ):
 
             success = False
-            error = "Missing login credentials. Have you " + \
-                "set the environmental parameters? Exiting."
+            error = (
+                "Missing login credentials. Have you "
+                + "set the environmental parameters? Exiting."
+            )
             log(error, level=0)
 
     if success:
@@ -1198,7 +1229,7 @@ def _take_action(args, crawler):
 
     elif hasattr(args, CONST_USAGE_ACTION):
         success, error = crawler.download_usage()
-   
+
     else:
         log("Unrecognised/unspecified action. Skipping.", level=0)
 
@@ -1227,15 +1258,17 @@ def _output_result(output, result):
         return success, error
 
     if output == CONST_OUTPUT_TABLE:
-        print(tabulate(result,
-                       headers="keys", tablefmt="psql", showindex=False))
+        print(
+            tabulate(result, headers="keys", tablefmt="psql", showindex=False)
+        )
 
     elif output == CONST_OUTPUT_CSV:
         result.to_csv("%s.csv" % CONST_DEFAULT_OUTPUT_FILE_NAME)
 
     elif output == CONST_OUTPUT_JSON:
-        result.to_json("%s.json" % CONST_DEFAULT_OUTPUT_FILE_NAME,
-                       orient="records")
+        result.to_json(
+            "%s.json" % CONST_DEFAULT_OUTPUT_FILE_NAME, orient="records"
+        )
 
     else:
         success = False

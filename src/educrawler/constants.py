@@ -5,10 +5,14 @@ Constants module.
 import os
 
 CONST_PORTAL_ADDRESS = "https://portal.azure.com/"
-CONST_PORTAL_OVERVIEW_ADDRESS = "https://portal.azure.com" + \
-    "/#blade/Microsoft_Azure_Education/EducationMenuBlade/overview"
-CONST_PORTAL_COURSES_ADDRESS = "https://portal.azure.com" + \
-    "/#blade/Microsoft_Azure_Education/EducationMenuBlade/classrooms"
+CONST_PORTAL_OVERVIEW_ADDRESS = (
+    "https://portal.azure.com"
+    + "/#blade/Microsoft_Azure_Education/EducationMenuBlade/overview"
+)
+CONST_PORTAL_COURSES_ADDRESS = (
+    "https://portal.azure.com"
+    + "/#blade/Microsoft_Azure_Education/EducationMenuBlade/classrooms"
+)
 
 CONST_WEBDRIVER_HEADLESS = True
 
