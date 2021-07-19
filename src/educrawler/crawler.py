@@ -20,6 +20,7 @@ from educrawler.constants import (
     CONST_REFRESH_SLEEP_TIME,
     CONST_MAX_REFRESH_COUNT,
     CONST_SLEEP_TIME,
+    CONST_COURSE_SLEEP_TIME,
     CONST_TIMEOUT,
     CONST_PORTAL_COURSES_ADDRESS,
     CONST_VERBOSE_LEVEL,
@@ -301,6 +302,8 @@ class Crawler:
             details_df: pandas dataframe containing all the course's
                 handouts and their details
         """
+
+        sleep(CONST_COURSE_SLEEP_TIME)
 
         details_df = None
 
