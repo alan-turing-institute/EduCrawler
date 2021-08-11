@@ -101,7 +101,7 @@ def main():
     """
 
     try:
-        default_output = os.environ["EC_DEFAULT_OUTPUT1"]
+        default_output = os.environ["EC_DEFAULT_OUTPUT"]
     except KeyError:
         default_output = CONST_OUTPUT_TABLE
 
